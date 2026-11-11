@@ -57,9 +57,12 @@
       (info[o.j].ov = info[o.j].ov || []).push(o.i);
     });
     var oks = info.filter(function (x) { return x.kind === 'ok'; });
+    var merged = CC.union(oks);
     return {
       rows: info, overlaps: overlaps, okCount: oks.length,
-      total: CC.sum(oks.map(function (x) { return x.dur; }))
+      total: CC.sum(oks.map(function (x) { return x.dur; })),
+      uniqTotal: CC.sum(merged.map(function (m) { return CC.diff(m.s, m.e); })),
+      uniqCount: merged.length
     };
   }
 
@@ -216,19 +219,28 @@
         h('span', { class: 'warn-text', text: '경고) ' + CC.fmtSer(o.s) + '~' + CC.fmtSer(o.e) + ' (' + CC.fmtDur(o.dur) + ' 중복)' })));
     });
     box.appendChild(ul);
-    box.appendChild(h('p', { class: 'muted small', text: '중복된 기간도 아래 합산에는 그대로 포함됩니다. 종료일과 다음 시작일이 같은 날이면 그 하루가 중복으로 표시됩니다.' }));
+    box.appendChild(h('p', { class: 'muted small', text: '‘중복 경력 포함’ 합산에는 겹친 기간이 그대로 들어가고, ‘중복 경력 제외’ 합산에서는 겹친 기간을 한 번만 셉니다. 종료일과 다음 시작일이 같은 날이면 그 하루가 중복으로 표시됩니다.' }));
   }
 
+  function fmtTotal(t) { return t.years + '년 ' + t.months + '개월 ' + t.days + '일'; }
+
   function renderTotal(p, a) {
-    var v = $('#totalValue'), note = $('#totalNote');
-    if (!a.okCount) { v.textContent = '—'; note.textContent = '계산할 기간이 없습니다'; return; }
-    var t = a.total;
-    v.textContent = t.years + '년 ' + t.months + '개월 ' + t.days + '일';
+    var v = $('#totalValue'), note = $('#totalNote'), u = $('#totalUniq'), un = $('#totalUniqNote');
+    if (!a.okCount) {
+      v.textContent = '—'; u.textContent = '—';
+      note.textContent = '계산할 기간이 없습니다'; un.textContent = '';
+      return;
+    }
+    v.textContent = fmtTotal(a.total);
+    u.textContent = fmtTotal(a.uniqTotal);
     var excluded = a.rows.filter(function (x) { return x.kind === 'bad' || x.kind === 'reversed'; }).length;
-    var parts = [a.okCount + '건 합산'];
+    var parts = [a.okCount + '건을 그대로 합산'];
     if (a.overlaps.length) parts.push('중복 ' + a.overlaps.length + '건 포함');
     if (excluded) parts.push('오류 ' + excluded + '건 제외');
     note.textContent = parts.join(' · ');
+    un.textContent = a.overlaps.length
+      ? '겹친 기간을 한 번만 계산 (' + a.uniqCount + '개 기간으로 정리)'
+      : '중복이 없어 위 합산과 같습니다';
   }
 
   function renderEditor() {
@@ -387,7 +399,9 @@
   function summaryText() {
     var p = current(), a = analyze(p), lines = [];
     var t = a.total;
-    lines.push('[' + p.name + '] 경력 합산: ' + (a.okCount ? t.years + '년 ' + t.months + '개월 ' + t.days + '일' : '—'));
+    lines.push('[' + p.name + ']');
+    lines.push('중복 경력 포함 합산: ' + (a.okCount ? fmtTotal(t) : '—'));
+    lines.push('중복 경력 제외 합산: ' + (a.okCount ? fmtTotal(a.uniqTotal) : '—'));
     p.rows.forEach(function (r, i) {
       var x = a.rows[i];
       if (x.kind !== 'ok') return;

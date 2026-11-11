@@ -88,10 +88,17 @@
         </div>
 
         <div class="card total" id="totalCard">
-          <div>
-            <div class="total-label">합산</div>
-            <div class="total-value" id="totalValue">—</div>
-            <div class="muted" id="totalNote"></div>
+          <div class="total-grid">
+            <div class="total-item">
+              <div class="total-label">중복 경력 포함 합산</div>
+              <div class="total-value" id="totalValue">—</div>
+              <div class="muted small" id="totalNote"></div>
+            </div>
+            <div class="total-item strong">
+              <div class="total-label">중복 경력 제외 합산</div>
+              <div class="total-value" id="totalUniq">—</div>
+              <div class="muted small" id="totalUniqNote"></div>
+            </div>
           </div>
           <div class="total-actions">
             <button type="button" class="btn primary" id="btnCopy">결과 복사</button>

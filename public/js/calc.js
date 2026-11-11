@@ -105,6 +105,27 @@
     return out;
   }
 
+  /**
+   * 겹치는 기간을 하나로 합침 (중복 제외 합산용).
+   * 하루라도 겹치는 기간만 합치고, 맞닿기만 한 기간(종료일 다음날 시작)은 따로 둡니다.
+   * 그래서 중복이 없으면 '포함 합산'과 '제외 합산'이 항상 같습니다.
+   */
+  function union(rows) {
+    var v = [];
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i];
+      if (r && r.s != null && r.e != null && r.e >= r.s) v.push({ s: r.s, e: r.e });
+    }
+    v.sort(function (a, b) { return a.s - b.s || a.e - b.e; });
+    var out = [];
+    v.forEach(function (r) {
+      var last = out[out.length - 1];
+      if (last && r.s <= last.e) { if (r.e > last.e) last.e = r.e; }
+      else out.push(r);
+    });
+    return out;
+  }
+
   /** 'YYYY-MM-DD' ↔ 일련번호 */
   function isoToSer(iso) {
     var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
@@ -151,7 +172,7 @@
   function lastDayOfMonth(y, m) { return parts(eomonth(y, m, 0)).d; }
 
   return {
-    diff: diff, sum: sum, overlap: overlap, findOverlaps: findOverlaps,
+    diff: diff, sum: sum, overlap: overlap, findOverlaps: findOverlaps, union: union,
     isoToSer: isoToSer, serToIso: serToIso, parseDate: parseDate,
     fmtSer: fmtSer, fmtIso: fmtIso, fmtDur: fmtDur, lastDayOfMonth: lastDayOfMonth
   };
