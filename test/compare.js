@@ -1,4 +1,4 @@
-const C=require('../js/calc.js');
+const C=require('../public/js/calc.js');
 const cases=require('./cases.json'), ex=require('./excel_res.json');
 let bad=0;
 cases.forEach(([s,e],i)=>{

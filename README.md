@@ -10,26 +10,32 @@
 
 ## 파일 구성
 ```
-index.html        화면
-style.css         스타일
-js/calc.js        계산 로직 (엑셀 수식 이식)
-js/storage.js     사람별 저장 (쿠키 / localStorage)
-js/app.js         화면 동작
-_headers          Cloudflare Pages 보안 헤더(CSP 등)
-test/             검증용 스크립트 (배포에 불필요)
+public/           배포되는 사이트 (이 폴더만 공개됨)
+  index.html, style.css, _headers
+  js/calc.js      계산 로직 (엑셀 수식 이식)
+  js/storage.js   사람별 저장 (쿠키 / localStorage)
+  js/app.js       화면 동작
+wrangler.jsonc    Cloudflare Workers(정적 파일) 배포 설정
+test/             검증용 스크립트 (배포되지 않음)
 ```
 
-## 배포 (GitHub → Cloudflare Pages)
-1. 이 폴더 전체를 GitHub 저장소에 올립니다.
-2. Cloudflare 대시보드 → Workers & Pages → Create → Pages → Connect to Git → 저장소 선택
-3. Framework preset: **None**, Build command: 비움, Build output directory: `/` (루트)
-4. Save and Deploy. 이후 `git push` 할 때마다 자동 배포됩니다.
+## 배포 (GitHub → Cloudflare)
+이 저장소를 GitHub에 올린 뒤, 아래 둘 중 하나로 연결합니다. 둘 다 `public/` 폴더만 공개합니다.
+
+**A. Workers (Cloudflare 권장, 새 프로젝트 기본)**
+1. Workers & Pages → Create → Import a repository → 저장소 선택
+2. Build command: 비움 / Deploy command: `npx wrangler deploy` (기본값 그대로)
+3. Deploy. 이후 `git push` 때마다 자동 배포됩니다. (`wrangler.jsonc`가 설정을 담고 있음)
+
+**B. Pages**
+1. Workers & Pages → Create → Pages → Connect to Git
+2. Framework preset: None / Build command: 비움 / Build output directory: `public`
 
 ## 저장 방식 주의
 - 기본은 **쿠키**입니다. 쿠키는 사이트에 접속할 때마다 서버로 함께 전송되며 쿠키 1개당 약 4KB 제한이 있어,
   전체 12KB를 넘으면 저장을 거부합니다(한도를 넘겨 헤더가 너무 커지면 사이트 접속 자체가 막힐 수 있기 때문).
 - 사람이 많거나 기록이 길면 화면 아래 **저장 방식 → 브라우저 저장소**로 바꾸세요(기존 데이터 자동 이전).
-- 코드에서 기본값을 바꾸려면 `js/storage.js`의 `init()`에서 `if (!mode) mode = 'cookie'` 를 `'local'`로 수정합니다.
+- 코드에서 기본값을 바꾸려면 `public/js/storage.js`의 `init()`에서 `if (!mode) mode = 'cookie'` 를 `'local'`로 수정합니다.
 - 입력한 데이터는 서버로 수집되지 않고 브라우저에만 저장됩니다.
 
 ## 계산 규칙 요약
