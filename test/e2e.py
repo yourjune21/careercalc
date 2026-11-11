@@ -32,6 +32,11 @@ with sync_playwright() as pw:
     check('row2 normalized', pg.locator('#rowsBody tr').nth(1).locator('.f-start').input_value()=='2026. 2. 1.')
     print('total:',pg.inner_text('#totalValue'),'|',pg.inner_text('#totalNote'))
     # 0 2 29 + 1 29(2/1~3/30=1m29d)+ 4/1~4/30=1m0d(full) -> M=0+1+1=2,D=58->+1m→ 3m? 
+    fill(3,'21/2/20','21.3.19')
+    r3=pg.locator('#rowsBody tr').nth(3)
+    check('2자리 연도 정규화', r3.locator('.f-start').input_value()=='2021. 2. 20.' and r3.locator('.f-end').input_value()=='2021. 3. 19.', r3.locator('.f-start').input_value())
+    check('2자리 연도 계산 0y0m28d', [r3.locator('.res-'+k).inner_text() for k in 'ymd']==['0','1','0'], [r3.locator('.res-'+k).inner_text() for k in 'ymd'])
+    fill(3,'','')
     check('포함 합산 0년 5개월 28일', pg.inner_text('#totalValue')=='0년 5개월 28일')
     check('제외 합산 0년 3개월 29일', pg.inner_text('#totalUniq')=='0년 3개월 29일', pg.inner_text('#totalUniq'))
     pg.screenshot(path='/home/claude/shots/1_main.png', full_page=True)

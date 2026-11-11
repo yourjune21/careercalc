@@ -140,15 +140,24 @@
   }
   function pad(x) { return (x < 10 ? '0' : '') + x; }
 
+  /** 두 자리 연도 → 네 자리. 올해+10년 이하는 2000년대, 초과는 1900년대
+   *  (예: 올해가 2026년이면 00~36 → 2000~2036, 37~99 → 1937~1999) */
+  function fullYear(yy, nowYear) {
+    var pivot = ((nowYear || new Date().getFullYear()) + 10) % 100;
+    return yy <= pivot ? 2000 + yy : 1900 + yy;
+  }
+
   /** 사용자가 입력한 문자열 → 'YYYY-MM-DD' (실패 시 null).
-   *  2026-3-1, 2026/3/1, 2026.3.1, 2026. 3. 1., 20260301 모두 허용 */
-  function parseDate(text) {
+   *  2026-3-1, 2026/3/1, 2026.3.1, 2026. 3. 1., 20260301 및
+   *  연도를 두 자리로 줄인 21/2/20, 21.2.20, 210220 도 허용 (nowYear는 테스트용) */
+  function parseDate(text, nowYear) {
     if (text == null) return null;
     var t = String(text).trim();
     if (!t) return null;
     var y, m, d, r;
-    if ((r = /^(\d{4})\D+(\d{1,2})\D+(\d{1,2})\D*$/.exec(t))) { y = +r[1]; m = +r[2]; d = +r[3]; }
+    if ((r = /^(\d{4}|\d{2})\D+(\d{1,2})\D+(\d{1,2})\D*$/.exec(t))) { y = +r[1]; m = +r[2]; d = +r[3]; if (r[1].length === 2) y = fullYear(y, nowYear); }
     else if ((r = /^(\d{4})(\d{2})(\d{2})$/.exec(t))) { y = +r[1]; m = +r[2]; d = +r[3]; }
+    else if ((r = /^(\d{2})(\d{2})(\d{2})$/.exec(t))) { y = fullYear(+r[1], nowYear); m = +r[2]; d = +r[3]; }
     else return null;
     if (y < 1900 || y > 2200) return null;
     var iso = y + '-' + pad(m) + '-' + pad(d);
