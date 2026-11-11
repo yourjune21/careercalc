@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>경력 계산기 · 민법 역(曆)에 의한 계산</title>
+  <meta name="description" content="민법 역(曆)에 의한 경력 계산·합산, 중복 기간 검출. 사람별로 저장해 두고 이어서 계산할 수 있습니다.">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230f5c5c'/%3E%3Cpath d='M9 11h14M9 16h14M9 21h8' stroke='%23fff' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="top-inner">
+      <div>
+        <h1>경력 계산기</h1>
+        <p class="sub">민법 역(曆)에 의한 계산 · 시작일과 종료일을 모두 포함하여 계산합니다</p>
+      </div>
+      <div class="save-state" id="saveState" role="status" aria-live="polite">불러오는 중…</div>
+    </div>
+  </header>
+
+  <div class="banner" id="banner" role="alert" hidden></div>
+
+  <main class="layout">
+    <aside class="people card" aria-label="사람 목록">
+      <div class="people-head">
+        <h2>사람별 보관함</h2>
+        <span class="count" id="peopleCount">0 / 100</span>
+      </div>
+      <form id="addForm" class="add-form" autocomplete="off">
+        <input id="newName" type="text" maxlength="20" placeholder="이름 입력 (예: 홍길동)" aria-label="새 사람 이름">
+        <button type="submit" class="btn primary">추가</button>
+      </form>
+      <input id="peopleSearch" class="search" type="search" placeholder="이름 검색" aria-label="이름 검색" hidden>
+      <ul id="peopleList" class="people-list"></ul>
+    </aside>
+
+    <section class="work" aria-live="off">
+      <div id="empty" class="card empty" hidden>
+        <h2>먼저 계산할 사람을 추가하세요</h2>
+        <p>이름 입력란에 이름을 적고 <b>추가</b>를 누르면 사람별로 경력을 따로 입력·저장할 수 있습니다.<br>최대 100명까지 이 브라우저에 기억합니다.</p>
+      </div>
+
+      <div id="editor" hidden>
+        <div class="card">
+          <div class="work-head">
+            <div>
+              <h2 id="personTitle"></h2>
+              <p class="muted" id="personSub"></p>
+            </div>
+            <div class="head-actions">
+              <button type="button" class="btn" id="btnRename">이름 변경</button>
+              <button type="button" class="btn danger" id="btnDelete">삭제</button>
+            </div>
+          </div>
+
+          <p class="guide">날짜는 <code>2026-3-1</code>, <code>2026/3/1</code>, <code>2026.3.1</code>, <code>20260301</code> 어느 형식으로 입력해도 됩니다. 입력 칸에서 <kbd>Enter</kbd>를 누르면 다음 줄로 이동합니다.</p>
+
+          <div class="table-wrap">
+            <table class="rows" id="rowsTable">
+              <thead>
+                <tr>
+                  <th class="c-no">순</th>
+                  <th class="c-memo">내용</th>
+                  <th class="c-date">시작일</th>
+                  <th class="c-date">종료일</th>
+                  <th class="c-n">년</th>
+                  <th class="c-n">월</th>
+                  <th class="c-n">일</th>
+                  <th class="c-st">확인</th>
+                  <th class="c-del"><span class="sr">삭제</span></th>
+                </tr>
+              </thead>
+              <tbody id="rowsBody"></tbody>
+            </table>
+          </div>
+
+          <div class="row-actions">
+            <button type="button" class="btn" id="btnAddRow">+ 행 추가</button>
+            <button type="button" class="btn ghost" id="btnClearRows">입력 내용 모두 지우기</button>
+          </div>
+        </div>
+
+        <div class="card" id="warnCard">
+          <h3>중복 기간 검사</h3>
+          <div id="warnBody"></div>
+        </div>
+
+        <div class="card total" id="totalCard">
+          <div>
+            <div class="total-label">합산</div>
+            <div class="total-value" id="totalValue">—</div>
+            <div class="muted" id="totalNote"></div>
+          </div>
+          <div class="total-actions">
+            <button type="button" class="btn primary" id="btnCopy">결과 복사</button>
+            <button type="button" class="btn" id="btnPrint">인쇄</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <div class="foot-inner card">
+      <div class="foot-col">
+        <h3>저장 방식</h3>
+        <label class="field">
+          <span class="sr">저장 방식</span>
+          <select id="modeSelect">
+            <option value="cookie">쿠키 (기본)</option>
+            <option value="local">브라우저 저장소 (용량 여유)</option>
+          </select>
+        </label>
+        <div class="meter" id="meter" hidden>
+          <div class="meter-bar"><span id="meterFill"></span></div>
+          <div class="muted" id="meterText"></div>
+        </div>
+        <p class="muted small" id="modeNote"></p>
+      </div>
+      <div class="foot-col">
+        <h3>백업</h3>
+        <div class="btn-row">
+          <button type="button" class="btn" id="btnExport">내보내기 (JSON)</button>
+          <button type="button" class="btn" id="btnImport">불러오기</button>
+          <input type="file" id="importFile" accept=".json,application/json" hidden>
+        </div>
+        <p class="muted small">쿠키·브라우저 데이터를 지우면 저장 내용도 사라지므로 가끔 백업해 두세요. 불러오기는 현재 목록에 <b>추가</b>됩니다.</p>
+      </div>
+      <div class="foot-col">
+        <h3>개인정보</h3>
+        <p class="muted small">입력한 이름과 경력은 서버로 전송·수집되지 않고 이 브라우저에만 저장됩니다. 공용 PC에서는 사용 후 전체 삭제하세요.</p>
+        <button type="button" class="btn danger" id="btnWipe">저장된 모든 데이터 삭제</button>
+      </div>
+    </div>
+    <p class="ref">(참고) 경력 계산 — 2017 공무원보수 등의 업무지침(인사혁신처 예규 제35호, 2017.1.20) · 엑셀 ‘경력계산기(ver. 20181112)’의 계산식과 동일</p>
+  </footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <script src="js/calc.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
