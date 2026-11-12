@@ -105,6 +105,13 @@
     return out;
   }
 
+  /** 인정 경력: 합산 결과에서 일수가 15일 이상이면 1개월로 올림, 15일 미만이면 버림.
+   *  (예: 1년 1개월 15일 → 1년 2개월, 1년 1개월 14일 → 1년 1개월) */
+  function recognize(t) {
+    var m = t.months + (t.days >= 15 ? 1 : 0);
+    return { years: t.years + Math.floor(m / 12), months: m % 12 };
+  }
+
   /**
    * 겹치는 기간을 하나로 합침 (중복 제외 합산용).
    * 하루라도 겹치는 기간만 합치고, 맞닿기만 한 기간(종료일 다음날 시작)은 따로 둡니다.
@@ -181,7 +188,7 @@
   function lastDayOfMonth(y, m) { return parts(eomonth(y, m, 0)).d; }
 
   return {
-    diff: diff, sum: sum, overlap: overlap, findOverlaps: findOverlaps, union: union,
+    diff: diff, sum: sum, overlap: overlap, findOverlaps: findOverlaps, union: union, recognize: recognize,
     isoToSer: isoToSer, serToIso: serToIso, parseDate: parseDate,
     fmtSer: fmtSer, fmtIso: fmtIso, fmtDur: fmtDur, lastDayOfMonth: lastDayOfMonth
   };

@@ -9,7 +9,8 @@
  * 전체 용량 한도(COOKIE_BUDGET)를 두어 한도를 넘으면 저장을 거부합니다.
  * (한도를 넘겨 헤더가 너무 커지면 사이트 접속 자체가 막힐 수 있습니다.)
  *
- * 데이터 형태: { people:[{id, name, rows:[{memo, start:'YYYY-MM-DD'|'', end}]}], selected:id|0 }
+ * 데이터 형태: { people:[{id, name, rows:[{memo, start:'YYYY-MM-DD'|'', end}]}], selected:id|0, ref:'YYYY-MM-DD'|'' }
+ * (ref = 경력 산정 기준일, 비어 있으면 오늘)
  */
 (function (root) {
   'use strict';
@@ -19,7 +20,7 @@
   var COOKIE_BUDGET = 12000;        // 쿠키 전체 한도(이름+값, 바이트 근사)
   var VALUE_MAX = 3800;             // 쿠키 1개 값 한도
   var MAX_AGE = 34560000;           // 400일 (브라우저 최대 허용치), 저장할 때마다 갱신
-  var IDX = 'cc_i', PFX = 'cc_p';
+  var IDX = 'cc_i', PFX = 'cc_p', REF = 'cc_r';
   var MODE_KEY = 'careerCalc.mode', LS_KEY = 'careerCalc.data.v1';
   var NAME_MAX = 20, MEMO_MAX = 30;
 
@@ -93,6 +94,7 @@
   function cookieMap(state) {
     var map = {};
     map[IDX] = (state.selected || 0) + '~' + state.people.map(function (p) { return p.id; }).join('.');
+    if (state.ref) map[REF] = state.ref.replace(/-/g, '');
     state.people.forEach(function (p) { map[PFX + p.id] = packPerson(p); });
     return map;
   }
@@ -109,7 +111,7 @@
       written = {};
       Object.keys(c).forEach(function (k) { written[k] = c[k]; });
       var idx = c[IDX];
-      var state = { people: [], selected: 0 };
+      var state = { people: [], selected: 0, ref: isoFrom8(c[REF]) };
       if (!idx) return state;
       var sp = idx.split('~');
       var sel = parseInt(sp[0], 10) || 0;
@@ -159,7 +161,7 @@
     load: function () {
       try {
         var d = JSON.parse(root.localStorage.getItem(LS_KEY) || 'null');
-        if (!d || !Array.isArray(d.people)) return { people: [], selected: 0 };
+        if (!d || !Array.isArray(d.people)) return { people: [], selected: 0, ref: '' };
         var seen = {}, people = [];
         d.people.forEach(function (p) {
           if (!p || !p.id || seen[p.id] || people.length >= MAX_PEOPLE) return;
@@ -176,13 +178,14 @@
             })
           });
         });
-        return { people: people, selected: seen[d.selected] ? d.selected : 0 };
-      } catch (e) { return { people: [], selected: 0 }; }
+        return { people: people, selected: seen[d.selected] ? d.selected : 0, ref: CC.isoToSer(d.ref) == null ? '' : d.ref };
+      } catch (e) { return { people: [], selected: 0, ref: '' }; }
     },
     save: function (state) {
       try {
         var slim = {
           selected: state.selected || 0,
+          ref: state.ref || '',
           people: state.people.map(function (p) {
             return { id: p.id, name: p.name, rows: p.rows.map(function (r) { return { memo: r.memo || '', start: r.start || '', end: r.end || '' }; }) };
           })

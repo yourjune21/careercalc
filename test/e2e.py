@@ -39,6 +39,7 @@ with sync_playwright() as pw:
     fill(3,'','')
     check('포함 합산 0년 5개월 28일', pg.inner_text('#totalValue')=='0년 5개월 28일')
     check('제외 합산 0년 3개월 29일', pg.inner_text('#totalUniq')=='0년 3개월 29일', pg.inner_text('#totalUniq'))
+    check('인정 경력 0년 4개월', pg.inner_text('#totalRecog')=='0년 4개월', pg.inner_text('#totalRecog'))
     pg.screenshot(path='/home/claude/shots/1_main.png', full_page=True)
     # 두번째 사람
     pg.fill('#newName','홍길순'); pg.press('#newName','Enter')
@@ -74,6 +75,20 @@ with sync_playwright() as pw:
     check('local persisted', pg.locator('#peopleList .person').count()==2 and pg.locator('#modeSelect').input_value()=='local')
     pg.select_option('#modeSelect','cookie'); pg.wait_for_timeout(300)
     check('back to cookie', len([c for c in ctx.cookies() if c['name'].startswith('cc_')])==3)
+    # 경력 산정 기준일
+    pg.fill('#refDate','26/3/31'); pg.press('#refDate','Tab')
+    check('기준일 정규화', pg.input_value('#refDate')=='2026. 3. 31.', pg.input_value('#refDate'))
+    pg.fill('#newName','기준일테스트'); pg.press('#newName','Enter')
+    r0=pg.locator('#rowsBody tr').nth(0); r0.locator('.f-start').fill('2026-3-1'); r0.locator('.f-start').blur()
+    check('종료일 비움 → 기준일까지 0y1m0d', [r0.locator('.res-'+k).inner_text() for k in 'ymd']==['0','1','0'], [r0.locator('.res-'+k).inner_text() for k in 'ymd'])
+    check('기준일까지 칩', '기준일까지' in r0.locator('.c-st').inner_text())
+    r1=pg.locator('#rowsBody tr').nth(1); r1.locator('.f-start').fill('2026-5-1'); r1.locator('.f-start').blur()
+    check('시작일이 기준일보다 늦으면 제외', r1.locator('.chip.bad').count()==1)
+    pg.fill('#refDate','2026-4-30'); pg.press('#refDate','Tab')
+    check('기준일 변경 즉시 재계산', [r0.locator('.res-'+k).inner_text() for k in 'ymd']==['0','2','0'], [r0.locator('.res-'+k).inner_text() for k in 'ymd'])
+    pg.wait_for_timeout(600); pg.reload()
+    check('기준일 유지(쿠키)', pg.input_value('#refDate')=='2026. 4. 30.', pg.input_value('#refDate'))
+    check('버전 표시', 'v1.4.0' in pg.inner_text('#verLine'), pg.inner_text('#verLine'))
     # 쿠키 용량 한도: 100명 한도와 12KB 예산
     res=pg.evaluate("""()=>{const S=window.CareerStorage;const people=[];for(let i=1;i<=100;i++){people.push({id:i,name:'사람'+i,rows:[{memo:'근무',start:'2020-01-01',end:'2020-12-31'}]});}
       const m=S.measure({people,selected:1}); const r=S.save('cookie',{people,selected:1}); S.save('cookie',{people:[],selected:0}); return {m,r};}""")

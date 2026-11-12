@@ -170,7 +170,11 @@ table.rows { width: 100%; border-collapse: collapse; min-width: 800px; }
 /* 합산 */
 .total { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; border-color: #b5d6d1; background: linear-gradient(180deg, #f2f9f7, #fff); }
 .total-label { font-size: 13px; font-weight: 600; color: var(--accent); }
-.total-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; flex: 1 1 520px; }
+.total-main { display: grid; gap: 12px; flex: 1 1 520px; }
+.total-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.total-item.recog { background: var(--accent); border-color: var(--accent); color: #fff; }
+.total-item.recog .total-label { color: #cfe9e5; }
+.total-item.recog .small { color: #cfe9e5; }
 .total-item { padding: 12px 16px; border-radius: 10px; border: 1px solid var(--line); background: #fff; }
 .total-item.strong { border-color: var(--accent); background: var(--accent-soft); }
 .total-value { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.25; margin: 2px 0; }
@@ -223,3 +227,20 @@ table.rows { width: 100%; border-collapse: collapse; min-width: 800px; }
   input { border: 0 !important; background: transparent !important; padding: 0 !important; }
   .rows tr.row-warn td, .rows tr.row-bad td { background: transparent; }
 }
+
+/* 기준일 바 */
+.refwrap { max-width: 1180px; margin: 14px auto 0; padding: 0 20px; }
+.refbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 18px; border-color: #b5d6d1; background: #f2f9f7; }
+.ref-label { font-weight: 700; color: var(--accent); white-space: nowrap; }
+.ref-box { width: 180px; }
+.ref-box input.f-ref { padding-right: 34px; }
+.ref-note { margin: 0; flex: 1 1 260px; }
+
+/* 버전 */
+.verbox { margin: 14px 4px 0; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+.ver { font-weight: 600; }
+.changelog summary { cursor: pointer; display: inline; }
+.changelog ul { margin: 6px 0 0; padding-left: 18px; }
+.changelog li { margin: 2px 0; }
+@media (max-width: 860px) { .refwrap { padding: 0 12px; } }
+@media print { #btnRefToday, .changelog { display: none !important; } .refbar { background: transparent; padding: 0 0 6px; } .refwrap { padding: 0; margin: 0; } }

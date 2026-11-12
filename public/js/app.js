@@ -25,7 +25,7 @@
 
   /* ---------- 상태 ---------- */
   var boot = ST.init();
-  var store = { mode: boot.mode, people: boot.state.people, selected: boot.state.selected };
+  var store = { mode: boot.mode, people: boot.state.people, selected: boot.state.selected, ref: boot.state.ref || '' };
   var search = '';
   var saveTimer = null, dirty = false;
 
@@ -34,6 +34,11 @@
   function ensureRows(p) { while (p.rows.length < START_ROWS) p.rows.push(blankRow()); }
   store.people.forEach(ensureRows);
 
+  function p2(n) { return (n < 10 ? '0' : '') + n; }
+  function todayIso() { var d = new Date(); return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()); }
+  function effRef() { return store.ref || todayIso(); }
+  function snapshot() { return { people: store.people, selected: store.selected || 0, ref: store.ref }; }
+
   function current() {
     for (var i = 0; i < store.people.length; i++) if (store.people[i].id === store.selected) return store.people[i];
     return null;
@@ -41,15 +46,18 @@
 
   /* ---------- 분석 ---------- */
   function analyze(p) {
+    var refSer = CC.isoToSer(effRef());
     var info = p.rows.map(function (r) {
-      var s = CC.isoToSer(r.start), e = CC.isoToSer(r.end);
+      var s = CC.isoToSer(r.start), e = CC.isoToSer(r.end), usedRef = false;
       if (!(r.start || r.end || r.sRaw || r.eRaw)) return { kind: 'empty' };
       if (r.sBad || r.eBad) {
         return { kind: 'bad', msg: [r.sBad && '시작일', r.eBad && '종료일'].filter(Boolean).join('·') + ' 형식을 확인하세요' };
       }
+      // 종료일을 비워 둔 경력은 기준일까지 계산
+      if (s != null && e == null && !r.end && !r.eRaw && refSer != null) { e = refSer; usedRef = true; }
       if (s == null || e == null) return { kind: 'partial', msg: s == null ? '시작일을 입력하세요' : '종료일을 입력하세요' };
-      if (e < s) return { kind: 'reversed', msg: '종료일이 시작일보다 빠릅니다 (계산 제외)' };
-      return { kind: 'ok', s: s, e: e, dur: CC.diff(s, e) };
+      if (e < s) return { kind: 'reversed', msg: usedRef ? '시작일이 기준일보다 늦습니다 (계산 제외)' : '종료일이 시작일보다 빠릅니다 (계산 제외)' };
+      return { kind: 'ok', s: s, e: e, dur: CC.diff(s, e), usedRef: usedRef };
     });
     var overlaps = CC.findOverlaps(info.map(function (x) { return x.kind === 'ok' ? { s: x.s, e: x.e } : null; }));
     overlaps.forEach(function (o) {
@@ -86,7 +94,7 @@
     clearTimeout(saveTimer);
     if (!dirty) return;
     dirty = false;
-    var res = ST.save(store.mode, { people: store.people, selected: store.selected || 0 });
+    var res = ST.save(store.mode, snapshot());
     if (res.ok) { setSaveState('saved'); showBanner(''); }
     else {
       setSaveState('failed');
@@ -132,7 +140,7 @@
   function buildRow(r, i) {
     var tr = h('tr', { 'data-i': i });
     var startIn = h('input', { type: 'text', class: 'f-start', inputmode: 'numeric', autocomplete: 'off', placeholder: '2026. 3. 1.', 'aria-label': (i + 1) + '번 시작일', value: r.start ? CC.fmtIso(r.start) : (r.sRaw || '') });
-    var endIn = h('input', { type: 'text', class: 'f-end', inputmode: 'numeric', autocomplete: 'off', placeholder: '2026. 3. 31.', 'aria-label': (i + 1) + '번 종료일', value: r.end ? CC.fmtIso(r.end) : (r.eRaw || '') });
+    var endIn = h('input', { type: 'text', class: 'f-end', inputmode: 'numeric', autocomplete: 'off', placeholder: '기준일까지', 'aria-label': (i + 1) + '번 종료일 (비우면 기준일까지)', value: r.end ? CC.fmtIso(r.end) : (r.eRaw || '') });
     if (r.sBad) startIn.classList.add('invalid');
     if (r.eBad) endIn.classList.add('invalid');
     function dateCell(input, which) {
@@ -183,7 +191,7 @@
       } else if (x.kind === 'partial') {
         st.appendChild(h('span', { class: 'chip soft', text: x.msg }));
       } else if (ok) {
-        st.appendChild(h('span', { class: 'chip ok', text: '✓' }));
+        st.appendChild(h('span', { class: 'chip ok', text: x.usedRef ? '✓ 기준일까지' : '✓' }));
       }
       ['s', 'e'].forEach(function (w) {
         var iso = w === 's' ? r.start : r.end, hint = tr.querySelector('[data-hint="' + w + '"]');
@@ -192,6 +200,7 @@
           var ser = CC.isoToSer(iso), y = +iso.slice(0, 4), m = +iso.slice(5, 7);
           if (ser != null && m === 2) txt = '2월 말일: ' + CC.lastDayOfMonth(y, 2) + '일' + (CC.lastDayOfMonth(y, 2) === 29 ? ' (윤년)' : '');
         }
+        if (w === 'e' && x.usedRef) txt = '→ ' + CC.fmtSer(x.e) + ' (기준일)까지 계산';
         hint.textContent = txt;
       });
     });
@@ -223,12 +232,14 @@
   }
 
   function fmtTotal(t) { return t.years + '년 ' + t.months + '개월 ' + t.days + '일'; }
+  function fmtRecog(r) { return r.years + '년 ' + r.months + '개월'; }
 
   function renderTotal(p, a) {
     var v = $('#totalValue'), note = $('#totalNote'), u = $('#totalUniq'), un = $('#totalUniqNote');
+    var rv = $('#totalRecog'), rn = $('#totalRecogNote');
     if (!a.okCount) {
-      v.textContent = '—'; u.textContent = '—';
-      note.textContent = '계산할 기간이 없습니다'; un.textContent = '';
+      v.textContent = '—'; u.textContent = '—'; rv.textContent = '—';
+      note.textContent = '계산할 기간이 없습니다'; un.textContent = ''; rn.textContent = '';
       return;
     }
     v.textContent = fmtTotal(a.total);
@@ -238,6 +249,9 @@
     if (a.overlaps.length) parts.push('중복 ' + a.overlaps.length + '건 포함');
     if (excluded) parts.push('오류 ' + excluded + '건 제외');
     note.textContent = parts.join(' · ');
+    var rec = CC.recognize(a.uniqTotal);
+    rv.textContent = fmtRecog(rec);
+    rn.textContent = '중복 제외 ' + fmtTotal(a.uniqTotal) + ' → ' + (a.uniqTotal.days >= 15 ? '일수 15일 이상이라 1개월 올림' : '일수 15일 미만이라 버림');
     un.textContent = a.overlaps.length
       ? '겹친 기간을 한 번만 계산 (' + a.uniqCount + '개 기간으로 정리)'
       : '중복이 없어 위 합산과 같습니다';
@@ -399,13 +413,14 @@
   function summaryText() {
     var p = current(), a = analyze(p), lines = [];
     var t = a.total;
-    lines.push('[' + p.name + ']');
+    lines.push('[' + p.name + '] 경력 산정 기준일: ' + CC.fmtIso(effRef()));
     lines.push('중복 경력 포함 합산: ' + (a.okCount ? fmtTotal(t) : '—'));
     lines.push('중복 경력 제외 합산: ' + (a.okCount ? fmtTotal(a.uniqTotal) : '—'));
+    lines.push('인정 경력: ' + (a.okCount ? fmtRecog(CC.recognize(a.uniqTotal)) + ' (중복 제외 합산 기준, 15일 이상 1개월 올림)' : '—'));
     p.rows.forEach(function (r, i) {
       var x = a.rows[i];
       if (x.kind !== 'ok') return;
-      lines.push((i + 1) + '. ' + (r.memo ? r.memo + ' ' : '') + CC.fmtSer(x.s) + '~' + CC.fmtSer(x.e) + ' (' + CC.fmtDur(x.dur) + ')');
+      lines.push((i + 1) + '. ' + (r.memo ? r.memo + ' ' : '') + CC.fmtSer(x.s) + '~' + CC.fmtSer(x.e) + (x.usedRef ? '(기준일)' : '') + ' (' + CC.fmtDur(x.dur) + ')');
     });
     a.overlaps.forEach(function (o) {
       lines.push('경고) ' + (o.i + 1) + '번↔' + (o.j + 1) + '번 ' + CC.fmtSer(o.s) + '~' + CC.fmtSer(o.e) + ' (' + CC.fmtDur(o.dur) + ' 중복)');
@@ -445,7 +460,7 @@
   $('#modeSelect').addEventListener('change', function (e) {
     var to = e.target.value;
     flushSave();
-    var res = ST.switchMode(store.mode, to, { people: store.people, selected: store.selected || 0 });
+    var res = ST.switchMode(store.mode, to, snapshot());
     if (res.ok) { store.mode = to; showBanner(''); setSaveState('saved'); toast('저장 방식을 바꾸고 기존 데이터를 옮겼습니다.'); }
     else { e.target.value = store.mode; showBanner(failMessage(res)); }
     renderMeter();
@@ -453,7 +468,7 @@
 
   $('#btnExport').addEventListener('click', function () {
     var data = {
-      app: 'career-calc', version: 1, exportedAt: new Date().toISOString(),
+      app: 'career-calc', version: 1, exportedAt: new Date().toISOString(), ref: store.ref || '',
       people: store.people.map(function (p) {
         return { name: p.name, rows: p.rows.filter(function (r) { return r.memo || r.start || r.end; }).map(function (r) { return { memo: r.memo || '', start: r.start || '', end: r.end || '' }; }) };
       })
@@ -489,6 +504,7 @@
           store.people.push(np); added++;
         });
         if (!store.selected && store.people.length) store.selected = store.people[0].id;
+        if (!store.ref && CC.isoToSer(d.ref) != null) { store.ref = d.ref; refIn.value = CC.fmtIso(d.ref); }
         flushSaveNow();
         renderAll();
         toast(added + '명을 불러왔습니다.' + (skipped ? ' (' + MAX_PEOPLE + '명 초과로 ' + skipped + '명 제외)' : ''));
@@ -501,11 +517,52 @@
   $('#btnWipe').addEventListener('click', function () {
     if (!confirm('이 브라우저에 저장된 모든 사람과 경력 기록을 삭제할까요?\n되돌릴 수 없으니 필요하면 먼저 백업하세요.')) return;
     ST.wipeAll();
-    store.people = []; store.selected = 0; dirty = false;
+    store.people = []; store.selected = 0; store.ref = ''; refIn.value = CC.fmtIso(todayIso()); dirty = false;
     setSaveState('none'); showBanner('');
     renderAll();
     toast('모두 삭제했습니다.');
   });
+
+  /* ---------- 경력 산정 기준일 ---------- */
+  var refIn = $('#refDate'), refPicker = $('#refPicker');
+  refIn.value = CC.fmtIso(effRef());
+  refIn.placeholder = '오늘 (' + CC.fmtIso(todayIso()) + ')';
+
+  function afterRef() {
+    if (current()) updateResults(); else renderPeople();
+    scheduleSave();
+  }
+  refIn.addEventListener('input', function () {
+    var t = refIn.value.trim(), iso = CC.parseDate(t);
+    if (!t) { store.ref = ''; refIn.classList.remove('invalid'); afterRef(); }
+    else if (iso) { store.ref = iso; refIn.classList.remove('invalid'); afterRef(); }
+  });
+  refIn.addEventListener('blur', function () {
+    var t = refIn.value.trim(), iso = CC.parseDate(t);
+    if (!t) { refIn.classList.remove('invalid'); return; }
+    if (iso) { refIn.value = CC.fmtIso(iso); refIn.classList.remove('invalid'); }
+    else { refIn.classList.add('invalid'); toast('기준일 형식을 확인하세요. 예: 2026-8-31, 26/8/31'); }
+  });
+  $('#refCal').addEventListener('click', function () {
+    refPicker.value = effRef();
+    try { if (refPicker.showPicker) refPicker.showPicker(); else refPicker.focus(); } catch (err) { refPicker.focus(); }
+  });
+  refPicker.addEventListener('input', function () {
+    if (!refPicker.value) return;
+    store.ref = refPicker.value; refIn.value = CC.fmtIso(store.ref); refIn.classList.remove('invalid'); afterRef();
+  });
+  $('#btnRefToday').addEventListener('click', function () {
+    store.ref = todayIso(); refIn.value = CC.fmtIso(store.ref); refIn.classList.remove('invalid');
+    afterRef(); toast('기준일을 오늘 날짜로 바꿨습니다.');
+  });
+
+  /* ---------- 버전 표시 ---------- */
+  (function () {
+    var info = window.APP_INFO; if (!info) return;
+    $('#verLine').textContent = '경력 계산기 v' + info.version + ' (' + info.date + ')';
+    var ul = $('#changeList');
+    info.changes.forEach(function (c) { ul.appendChild(h('li', { text: 'v' + c[0] + ' (' + c[1] + ') ' + c[2] })); });
+  })();
 
   /* ---------- 알림 ---------- */
   var toastTimer;

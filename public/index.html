@@ -20,6 +20,19 @@
     </div>
   </header>
 
+  <div class="refwrap">
+    <section class="card refbar" aria-label="경력 산정 기준일">
+      <label for="refDate" class="ref-label">경력 산정 기준일</label>
+      <div class="date-box ref-box">
+        <input id="refDate" type="text" class="f-ref" inputmode="numeric" autocomplete="off" aria-label="경력 산정 기준일">
+        <button type="button" class="cal" id="refCal" aria-label="기준일 달력 열기" tabindex="-1">📅</button>
+        <input type="date" id="refPicker" class="picker" tabindex="-1" aria-hidden="true" min="1900-01-01" max="2200-12-31">
+      </div>
+      <button type="button" class="btn" id="btnRefToday">오늘로</button>
+      <p class="muted small ref-note">종료일을 비워 둔 경력은 <b>이 날짜까지</b> 계산합니다. (비워 두면 오늘 날짜)</p>
+    </section>
+  </div>
+
   <div class="banner" id="banner" role="alert" hidden></div>
 
   <main class="layout">
@@ -88,6 +101,7 @@
         </div>
 
         <div class="card total" id="totalCard">
+          <div class="total-main">
           <div class="total-grid">
             <div class="total-item">
               <div class="total-label">중복 경력 포함 합산</div>
@@ -99,6 +113,12 @@
               <div class="total-value" id="totalUniq">—</div>
               <div class="muted small" id="totalUniqNote"></div>
             </div>
+          </div>
+          <div class="total-item recog">
+            <div class="total-label">인정 경력</div>
+            <div class="total-value" id="totalRecog">—</div>
+            <div class="small" id="totalRecogNote"></div>
+          </div>
           </div>
           <div class="total-actions">
             <button type="button" class="btn primary" id="btnCopy">결과 복사</button>
@@ -142,10 +162,15 @@
       </div>
     </div>
     <p class="ref">(참고) 경력 계산 — 2017 공무원보수 등의 업무지침(인사혁신처 예규 제35호, 2017.1.20) · 엑셀 ‘경력계산기(ver. 20181112)’의 계산식과 동일</p>
+    <div class="verbox">
+      <span id="verLine" class="ver"></span>
+      <details class="changelog"><summary>변경 이력</summary><ul id="changeList"></ul></details>
+    </div>
   </footer>
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
+  <script src="js/version.js"></script>
   <script src="js/calc.js"></script>
   <script src="js/storage.js"></script>
   <script src="js/app.js"></script>
