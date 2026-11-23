@@ -748,6 +748,19 @@
     if (!refPicker.value) return;
     store.ref = refPicker.value; refIn.value = CC.fmtIso(store.ref); refIn.classList.remove('invalid'); afterRef();
   });
+  /** 올해 학년도말(다음 해 2월 말일). 1~2월이면 아직 전 학년도이므로 올해 2월 말일 */
+  function schoolYearEnd() {
+    var d = new Date(), y = d.getFullYear(), sy = d.getMonth() + 1 >= 3 ? y : y - 1, ey = sy + 1;
+    return { label: sy + '학년도말', iso: ey + '-02-' + p2(CC.lastDayOfMonth(ey, 2)) };
+  }
+  var sye = schoolYearEnd();
+  $('#btnRefYearEnd').textContent = sye.label + '까지';
+  $('#btnRefYearEnd').title = '기준일을 ' + CC.fmtIso(sye.iso) + '(' + sye.label + ')로 설정';
+  $('#btnRefYearEnd').addEventListener('click', function () {
+    store.ref = sye.iso; refIn.value = CC.fmtIso(store.ref); refIn.classList.remove('invalid');
+    afterRef(); toast('기준일을 ' + sye.label + '(' + CC.fmtIso(sye.iso) + ')로 바꿨습니다.');
+  });
+
   $('#btnRefToday').addEventListener('click', function () {
     store.ref = todayIso(); refIn.value = CC.fmtIso(store.ref); refIn.classList.remove('invalid');
     afterRef(); toast('기준일을 오늘 날짜로 바꿨습니다.');

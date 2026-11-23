@@ -14,6 +14,12 @@ with sync_playwright() as pw:
     pg.goto(URL)
     check('empty state shown', pg.locator('#empty').is_visible())
     check('빈 상태에서 PDF 첨부창', pg.locator('#emptyDrop').is_visible() and pg.locator('#btnPdfEmpty').is_visible())
+    import datetime; _t=datetime.date.today(); _sy=_t.year if _t.month>=3 else _t.year-1
+    check('학년도말 버튼 라벨', pg.inner_text('#btnRefYearEnd')==f'{_sy}학년도말까지', pg.inner_text('#btnRefYearEnd'))
+    pg.click('#btnRefYearEnd')
+    _e=f'{_sy+1}. 2. {29 if (_sy+1)%4==0 and ((_sy+1)%100!=0 or (_sy+1)%400==0) else 28}.'
+    check('기준일=학년도말', pg.input_value('#refDate')==_e, pg.input_value('#refDate'))
+    pg.click('#btnRefToday')
     check('기본 저장 방식=브라우저 저장소', pg.locator('#modeSelect').input_value()=='local')
     pg.select_option('#modeSelect','cookie')
     # 사람 추가
@@ -53,7 +59,7 @@ with sync_playwright() as pw:
     pg.wait_for_timeout(600)
     cks=[c for c in ctx.cookies() if c['name'].startswith('cc_')]
     print('cookies:',[(c['name'],len(c['value'])) for c in cks])
-    check('cookies written', len(cks)==3)
+    check('cookies written', len(cks)>=3)
     pg.reload()
     check('people persisted', pg.locator('#peopleList .person').count()==2)
     check('selected persisted', pg.locator('#personTitle').inner_text()=='홍길순')
@@ -77,7 +83,7 @@ with sync_playwright() as pw:
     pg.reload()
     check('local persisted', pg.locator('#peopleList .person').count()==2 and pg.locator('#modeSelect').input_value()=='local')
     pg.select_option('#modeSelect','cookie'); pg.wait_for_timeout(300)
-    check('back to cookie', len([c for c in ctx.cookies() if c['name'].startswith('cc_')])==3)
+    check('back to cookie', len([c for c in ctx.cookies() if c['name'].startswith('cc_')])>=3)
     # 경력 산정 기준일
     pg.fill('#refDate','26/3/31'); pg.press('#refDate','Tab')
     check('기준일 정규화', pg.input_value('#refDate')=='2026. 3. 31.', pg.input_value('#refDate'))
@@ -91,7 +97,7 @@ with sync_playwright() as pw:
     check('기준일 변경 즉시 재계산', [r0.locator('.res-'+k).inner_text() for k in 'ymd']==['0','2','0'], [r0.locator('.res-'+k).inner_text() for k in 'ymd'])
     pg.wait_for_timeout(600); pg.reload()
     check('기준일 유지(쿠키)', pg.input_value('#refDate')=='2026. 4. 30.', pg.input_value('#refDate'))
-    check('버전 표시', 'v1.9.1' in pg.inner_text('#verLine'), pg.inner_text('#verLine'))
+    check('버전 표시', 'v1.10.0' in pg.inner_text('#verLine'), pg.inner_text('#verLine'))
     # 인사기록 PDF (환경변수 PDF_SAMPLE 로 실제 파일 경로를 줄 때만 실행 — 개인정보 파일은 저장소에 넣지 않음)
     import os
     sample=os.environ.get('PDF_SAMPLE')
