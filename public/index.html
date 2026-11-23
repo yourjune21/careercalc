@@ -70,7 +70,10 @@
         <input id="newName" type="text" maxlength="20" placeholder="이름 입력 (예: 홍길동)" aria-label="새 사람 이름">
         <button type="submit" class="btn primary">추가</button>
       </form>
-      <button type="button" class="btn pdf-new" id="btnPdfNew">PDF로 사람 추가</button>
+      <div class="people-actions">
+        <button type="button" class="btn" id="btnBlank" hidden>＋ 새로 입력 (빈 화면)</button>
+        <button type="button" class="btn pdf-new" id="btnPdfNew">PDF로 사람 추가</button>
+      </div>
       <input id="peopleSearch" class="search" type="search" placeholder="이름 검색" aria-label="이름 검색" hidden>
       <ul id="peopleList" class="people-list"></ul>
     </aside>
@@ -113,7 +116,7 @@
               <button type="button" class="btn ghost" id="btnDocClear" hidden>결과 지우기</button>
             </div>
           </div>
-          <div id="docDrop" class="drop">PDF 파일을 여기에 끌어다 놓거나 <b>PDF 불러오기</b>를 누르세요<br><span class="need">인사기록카드(전체) 파일을 첨부하십시오.</span></div>
+          <div id="docDrop" class="drop">PDF 파일을 여기에 끌어다 놓거나 <b>PDF 불러오기</b>를 누르세요<br><span class="muted small">이미 입력된 사람이 있으면 <b>새 사람으로 추가</b>됩니다.</span><br><span class="need">인사기록카드(전체) 파일을 첨부하십시오.</span></div>
           <div id="docBody" hidden>
             <div class="doc-who" id="docWho" hidden></div>
             <label class="mil-box" id="milBox" hidden><input type="checkbox" id="milChk"> <b>군 경력 추가</b> <span class="muted small" id="milInfo"></span> <span class="muted small">— 체크하면 총경력에 더하고, 해제하면 뺍니다</span></label>
@@ -174,6 +177,10 @@
 
           <details class="rows-fold" id="rowsFold" open>
           <summary id="rowsSummary">경력 입력창</summary>
+          <div class="cat-bar" id="catBar" hidden>
+            <label class="cat-group"><input type="checkbox" id="groupChk" checked> <b>카테고리별로 묶기</b> <span class="muted small">같은 종류의 맞닿은 기간을 하나로 합칩니다 (해제하면 PDF 원본 행 그대로)</span></label>
+            <span class="cat-legend"><i class="dot cat-s"></i>재직 <i class="dot cat-b"></i>부장 <i class="dot cat-d"></i>파견 <i class="dot cat-j"></i>전문직</span>
+          </div>
           <div class="table-wrap">
             <table class="rows" id="rowsTable">
               <thead>

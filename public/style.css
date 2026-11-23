@@ -363,3 +363,18 @@ h2 .badge { font-size: 12px; margin-left: 6px; }
   .rows .c-del { position: absolute; top: 6px; right: 6px; }
   .rows tr.row-warn { background: #fffaf0; } .rows tr.row-bad { background: #fff6f5; }
 }
+
+.people-actions { display: grid; gap: 6px; margin-top: 8px; }
+.people-actions .btn { width: 100%; }
+
+/* 재직 카테고리 색 */
+.cat-bar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px; margin: 6px 0 10px; padding: 8px 12px; border: 1px dashed var(--line); border-radius: 10px; }
+.cat-group { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; cursor: pointer; }
+.cat-legend { display: inline-flex; align-items: center; gap: 4px 10px; font-size: 13px; white-space: nowrap; }
+.dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: -4px; }
+.cat-s, tr[data-cat="s"] { --cc: #0f5c5c; } .cat-b, tr[data-cat="b"] { --cc: #6a4fb3; } .cat-d, tr[data-cat="d"] { --cc: #b3722f; } .cat-j, tr[data-cat="j"] { --cc: #4d7a2e; }
+.dot { background: var(--cc); }
+.rows tr[data-cat="s"] td.c-no, .rows tr[data-cat="b"] td.c-no, .rows tr[data-cat="d"] td.c-no, .rows tr[data-cat="j"] td.c-no { box-shadow: inset 5px 0 0 var(--cc); }
+.rows tr[data-cat="s"] .c-memo input, .rows tr[data-cat="b"] .c-memo input, .rows tr[data-cat="d"] .c-memo input, .rows tr[data-cat="j"] .c-memo input { border-left: 4px solid var(--cc); font-weight: 600; color: var(--cc); }
+.kind.H { background: #ececec; color: #666; }
+@media (max-width: 700px) { .rows tr[data-cat="s"], .rows tr[data-cat="b"], .rows tr[data-cat="d"], .rows tr[data-cat="j"] { border-left: 6px solid var(--cc); } .rows tr[data-cat] td.c-no { box-shadow: none !important; } }

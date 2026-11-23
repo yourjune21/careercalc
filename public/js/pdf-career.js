@@ -5,7 +5,7 @@
  *  - 그 밖의 내용(주민등록번호·주소 등)은 읽거나 저장하지 않습니다. 이름만 새 사람 추가용으로 읽습니다.
  *  - 모든 처리는 브라우저 안에서만 이루어집니다.
  *
- * 기록(record) 형태: { k:'S'|'B'|'D'|'J'|'L'|'V'|'R'|'M', s:'YYYY-MM-DD', e:'YYYY-MM-DD'|'' , x:0|1, lab? }
+ * 기록(record) 형태: { k:'S'|'B'|'D'|'J'|'L'|'V'|'R'|'M'|'H', s:'YYYY-MM-DD', e:'YYYY-MM-DD'|'' , x:0|1, lab? }
  *   S 재직(일반)  B 재직 중 부장  D 재직 중 파견  J 재직 중 전문직(장학사·교육연구사 등)
  *   L 휴직 등(총경력에서 차감)  V 학교폭력예방및기여  R 연구·시범학교(가산점)  M 군 복무(기본은 제외 x=1, 체크하면 총경력에 합산)
  *   e가 비어 있으면 ‘현재까지(기준일까지)’, x=1 이면 계산에서 제외
@@ -18,6 +18,7 @@
 
   var DATE = /^\s*(\d{4})\.(\d{2})\.(\d{2})\s*(~)?\s*$/;
   var LEAVE = /휴직|정직|직위해제/;
+  var HIRE = /공채|신규채용|신규임용|특별채용|특채|경력채용/;
   var DISPATCH = /파견/, BACK = /복귀|복직/, PRO = /장학관|장학사|교육연구관|교육연구사|전문직/;
 
   function iso(m) { return m[1] + '-' + m[2] + '-' + m[3]; }
@@ -137,8 +138,10 @@
         : (DISPATCH.test(t) && !BACK.test(t)) ? 'D'
         : PRO.test(t) ? 'J'
         : (/부장/.test(t) ? 'B' : 'S');
-      records.push({ k: k, s: r.s, e: r.e, x: 0, lab: txt.replace(/\s+/g, ' ').slice(0, 60) });
+      records.push({ k: k, s: r.s, e: r.e, x: 0, lab: txt.replace(/\s+/g, ' ').slice(0, 60), hire: HIRE.test(t) });
     });
+
+    markFirstHire(records);
 
     var b = buildRows(secItems.bonus);
     b.rows.forEach(function (r) {
@@ -164,6 +167,32 @@
     });
 
     return { name: name, org: org, pos: pos, records: records, warnings: warnings };
+  }
+
+  function nextDay(iso) {
+    var d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + 1);
+    return d.toISOString().slice(0, 10);
+  }
+  /**
+   * 첫 채용(일반공채·신규임용 등) 행은 종료일이 비어 있어 이후 전보·승진 행과 통째로 겹친다.
+   * 나머지 행이 그 기간을 전부 이어서 덮는 경우에만 'H'(기본 제외)로 표시한다.
+   */
+  function markFirstHire(records) {
+    var cand = null, INF = '9999-12-31';
+    records.forEach(function (r) { if (r.k === 'S' && r.hire && (!cand || r.s < cand.s)) cand = r; });
+    records.forEach(function (r) { delete r.hire; });
+    if (!cand) return;
+    var segs = records.filter(function (r) { return r !== cand && ['S', 'B', 'D', 'J', 'L'].indexOf(r.k) >= 0; })
+      .map(function (r) { return { s: r.s, e: r.e || INF }; })
+      .sort(function (a, b) { return a.s < b.s ? -1 : a.s > b.s ? 1 : 0; });
+    var merged = [];
+    segs.forEach(function (g) {
+      var l = merged[merged.length - 1];
+      if (l && (l.e === INF || g.s <= nextDay(l.e))) { if (g.e > l.e) l.e = g.e; }
+      else merged.push({ s: g.s, e: g.e });
+    });
+    var ce = cand.e || INF;
+    if (merged.some(function (m) { return m.s <= cand.s && m.e >= ce; })) { cand.k = 'H'; cand.x = 1; }
   }
 
   /** pdf.js 문서 → pages */
@@ -208,7 +237,7 @@
     }
     var leaves = CC.union(iv(kinds(['L'])));
     return {
-      total: pack(CC.subtract(CC.union(iv(kinds(['S', 'B', 'D', 'J', 'M'])), true), leaves)),
+      total: pack(CC.subtract(CC.union(iv(kinds(['S', 'H', 'B', 'D', 'J', 'M'])), true), leaves)),
       buzang: pack(CC.subtract(CC.union(iv(kinds(['B'])), true), leaves)),
       violence: pack(CC.union(iv(kinds(['V'])))),
       research: pack(CC.union(iv(kinds(['R'])))),
