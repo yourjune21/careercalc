@@ -578,3 +578,33 @@ h2 .badge { font-size: 12px; margin-left: 6px; }
 .award-why[hidden]{display:none}
 .award-why .why-line+.why-line{margin-top:3px}
 .award-sum .sum-line{margin:2px 0}
+.aw-slot[hidden],#awardAdd[hidden]{display:none}
+#awardAdd{justify-self:start}
+
+/* 합계 카드 압축 (v1.36) */
+.sum-table { border-spacing: 0 3px; }
+.sum-table thead th { padding: 0 10px; font-size: 11.5px; }
+.sum-table td { padding: 5px 10px; }
+.sum-chip { padding: 2px 10px; font-size: 12.5px; }
+.sum-table .sum-value { font-size: 16px; line-height: 1.25; }
+.sum-card.t .sum-value { font-size: 18px; } .sum-card.t .sum-rec b { font-size: 17px; }
+.sum-table .sum-rec b { font-size: 15px; }
+.sum-table .sum-rec .muted { font-size: 11.5px; }
+.sum-card .sum-edit { margin: 2px 0 0; padding: 2px 8px; }
+.sum-card .sum-edit b { font-size: 14px; }
+.sum-card .sum-pdf { font-size: 11px; margin: 0; line-height: 1.2; }
+.sum-vcell:has(.sum-edit.same) .sum-pdf, .sum-edit.same { display: none; }
+@media (min-width: 761px) {
+  .sum-table td:first-child { width: 150px; }
+  .sum-table .sum-vcell { width: 260px; } .sum-table .sum-rcell { width: 130px; }
+  .sum-table .sum-note { font-size: 12px; }
+  .sum-table .sum-note > div:first-child { display: inline; }
+  .sum-table .sum-note > details.sum-seg, .sum-table .sum-note > div.sum-seg { display: inline-block; margin: 0 0 0 8px; vertical-align: top; }
+  .sum-table .sum-note > details.sum-seg[open] { display: block; margin: 2px 0 0; }
+  .sum-table .sum-seg ul { margin: 2px 0 0; }
+  .sum-table .sum-seg li { line-height: 1.35; }
+}
+@media (min-width: 761px) {
+  .sum-table td:first-child { width: 130px; }
+  .sum-table .sum-vcell { width: 190px; } .sum-table .sum-rcell { width: 110px; }
+}

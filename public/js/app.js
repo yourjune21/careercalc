@@ -259,14 +259,16 @@
         return h('label', { class: 'aw-ck' }, cb, ' ' + x[1]);
       });
       var hold = h('input', { type: 'checkbox', checked: true, disabled: true });
-      box.appendChild(h('fieldset', { class: 'aw-slot' },
+      var fs = h('fieldset', { class: 'aw-slot', id: 'awardSlot' + n },
         h('legend', { text: '표창검정' + n }),
         h('div', { class: 'award-grid' },
           h('div', { class: 'af' }, h('label', { for: 'awardBase' + n, text: '표창 기준일' }), base),
           h('div', { class: 'af' }, h('label', { for: 'awardFrom' + n }, '유공기간 ', h('span', { class: 'muted small', text: '(시작일 ~ 종료일)' })), h('div', { class: 'range' }, from, h('span', { 'aria-hidden': 'true', text: '~' }), to)),
-          h('button', { type: 'button', class: 'btn ghost', id: 'awardClear' + n, text: '지우기' })),
+          h('button', { type: 'button', class: 'btn ghost', id: 'awardClear' + n, text: i > 0 ? '삭제' : '지우기' })),
         h('div', { class: 'aw-ex' }, h('span', { class: 'muted small', text: '겹치면 불가로 볼 경력:' }), checks,
-          h('label', { class: 'aw-ck fixed', title: '정직·직위해제는 항상 불가입니다' }, hold, ' 정직·직위해제(항상 제외)'))));
+          h('label', { class: 'aw-ck fixed', title: '정직·직위해제는 항상 불가입니다' }, hold, ' 정직·직위해제(항상 제외)')));
+      fs.hidden = i > 0 && !(sl.base || sl.from || sl.to);        // 검정2·3은 필요할 때 추가
+      box.appendChild(fs);
       [[base, 'base'], [from, 'from'], [to, 'to']].forEach(function (d) {
         var el = d[0], k = d[1];
         if (sl[k]) el.value = CC.fmtIso(sl[k]);
@@ -282,9 +284,19 @@
         });
       });
       $('#awardClear' + n).addEventListener('click', function () {
-        sl.base = sl.from = sl.to = ''; base.value = from.value = to.value = ''; saveAward(); awardRefresh();
+        sl.base = sl.from = sl.to = ''; base.value = from.value = to.value = '';
+        if (i > 0) { fs.hidden = true; AW_EX.forEach(function (x) { sl.ex[x[0]] = 1; fs.querySelector('#awardEx' + n + x[0]).checked = true; }); syncAddBtn(); }
+        saveAward(); awardRefresh();
       });
     });
+    var add = $('#awardAdd');
+    function syncAddBtn() { var hid = [].filter.call(box.children, function (c) { return c.hidden; }).length; add.hidden = !hid; }
+    add.addEventListener('click', function () {
+      var f = [].filter.call(box.children, function (c) { return c.hidden; })[0];
+      if (!f) return;
+      f.hidden = false; syncAddBtn(); f.querySelector('input[type=text]').focus();
+    });
+    syncAddBtn();
     box.addEventListener('change', function (e) {
       var cb = e.target; if (!cb.dataset || cb.dataset.k == null) return;
       award.slots[+cb.dataset.s].ex[cb.dataset.k] = cb.checked ? 1 : 0; saveAward(); awardRefresh();
@@ -1019,15 +1031,15 @@
     var mil = recs.filter(function (r) { return r.k === 'M'; });
     var ed = a ? editedFromRows(p, a, recs) : null;
     var tbody = h('tbody');
-    [['total', '총계', 't', '입력창에서 체크한 줄을 모두 포함 (중복은 한 번만)'],
-     ['actual', '실재직', 'a', '총경력에서 휴직·군 경력을 뺀 실제 근무 기간'],
+    [['total', '총계', 't', '체크한 줄 모두 (중복은 한 번)'],
+     ['actual', '실재직', 'a', '총계에서 휴직·군을 뺀 실제 근무'],
      ['buzang', '부장', 'b', '부장교사·부장담임 보직 기간'],
      ['research', '연구학교', 'r', '12.가산점 ‘연구·시범학교’ 기간'],
      ['violence', '학교폭력 예방기여', 'v', '학교폭력예방및기여 가산점 기간'],
-     ['mil', '군', 'm', '병역사항 복무 기간 (총경력에 미포함 · 입력창에서 체크하면 합계에 반영)'],
-     ['dispatch', '파견', 'd', '파견·파견연장 기간 (총경력에 포함)'],
-     ['leave', '휴직', 'l', '휴직·정직·직위해제 기간 (총경력에서 차감)'],
-     ['pro', '전문직', 'j', '장학사·교육연구사 등 전문직 기간 (총경력에 포함)']].filter(function (d) { return (d[0] !== 'pro' || c.pro.segs.length) && (d[0] !== 'mil' || mil.length); }).sort(function (x, y) { var o = getOrder(); return o.indexOf(x[2]) - o.indexOf(y[2]); }).forEach(function (d) {
+     ['mil', '군', 'm', '병역사항 복무 (총계 미포함, 체크 시 반영)'],
+     ['dispatch', '파견', 'd', '파견·파견연장 (총계에 포함)'],
+     ['leave', '휴직', 'l', '휴직·정직·직위해제 (총계에서 차감)'],
+     ['pro', '전문직', 'j', '장학사·교육연구사 등 (총계에 포함)']].filter(function (d) { return (d[0] !== 'pro' || c.pro.segs.length) && (d[0] !== 'mil' || mil.length); }).sort(function (x, y) { var o = getOrder(); return o.indexOf(x[2]) - o.indexOf(y[2]); }).forEach(function (d) {
       var r = c[d[0]];
       var ul = h('ul');
       r.segs.forEach(function (g, i) { ul.appendChild(h('li', { text: CC.fmtSer(g.s) + '~' + CC.fmtSer(g.e) + ' (' + CC.fmtDur(r.durs[i]) + ')' })); });
