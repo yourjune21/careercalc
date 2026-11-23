@@ -2,7 +2,7 @@
  * 사람별 데이터 저장 (최대 100명)
  *
  * 저장 방식 두 가지:
- *   - 'cookie' (기본) : 사람마다 쿠키 1개(cc_p1 ~ cc_p100) + 목록 쿠키(cc_i)
+ *   - 'cookie' : 사람마다 쿠키 1개(cc_p1 ~ cc_p100) + 목록 쿠키(cc_i)
  *   - 'local'         : localStorage (용량 제한이 사실상 없음)
  *
  * 쿠키는 요청마다 서버로 함께 전송되고 쿠키 1개당 약 4KB 제한이 있으므로,
@@ -44,7 +44,7 @@
     return r.k + r.s.replace(/-/g, '') + (r.e ? r.e.replace(/-/g, '') : '00000000') + (r.x ? '!' : '');
   }
   function unpackRec(t) {
-    var m = /^([SBLV])(\d{8})(\d{8})(!?)$/.exec(t);
+    var m = /^([SBDJLVM])(\d{8})(\d{8})(!?)$/.exec(t);
     if (!m) return null;
     var s = isoFrom8(m[2]);
     var e = m[3] === '00000000' ? '' : isoFrom8(m[3]);
@@ -56,13 +56,16 @@
     if (!doc || !Array.isArray(doc.recs)) return null;
     var recs = [];
     doc.recs.slice(0, 120).forEach(function (r) {
-      if (!r || 'SBLV'.indexOf(r.k) < 0 || r.k.length !== 1) return;
+      if (!r || 'SBDJLVM'.indexOf(r.k) < 0 || r.k.length !== 1) return;
       if (CC.isoToSer(r.s) == null) return;
       var e = r.e || '';
       if (e && CC.isoToSer(e) == null) return;
       recs.push({ k: r.k, s: r.s, e: e, x: r.x ? 1 : 0 });
     });
-    return recs.length ? { recs: recs } : null;
+    if (!recs.length) return null;
+    var out = { recs: recs };
+    ['name', 'org', 'pos'].forEach(function (f) { if (doc[f]) out[f] = String(doc[f]).replace(/[\u0000-\u001f]/g, '').slice(0, 40); });
+    return out;
   }
 
   function packPerson(p) {
@@ -72,14 +75,22 @@
     rows.forEach(function (r) {
       out.push(enc(r.memo || '') + '*' + (r.start || '').replace(/-/g, '') + '*' + (r.end || '').replace(/-/g, ''));
     });
-    if (p.doc && p.doc.recs && p.doc.recs.length) out.push('#' + p.doc.recs.map(packRec).join('.'));
+    if (p.doc && p.doc.recs && p.doc.recs.length) {
+      out.push('@' + enc(p.doc.name || '') + '*' + enc(p.doc.org || '') + '*' + enc(p.doc.pos || ''));
+      out.push('#' + p.doc.recs.map(packRec).join('.'));
+    }
     return out.join('~');
   }
 
   function unpackPerson(id, val) {
     var parts = String(val).split('~');
-    var rows = [], doc = null;
+    var rows = [], doc = null, who = null;
     for (var k = 1; k < parts.length; k++) {
+      if (parts[k].charAt(0) === '@') {
+        var w = parts[k].slice(1).split('*');
+        who = { name: dec(w[0] || ''), org: dec(w[1] || ''), pos: dec(w[2] || '') };
+        continue;
+      }
       if (parts[k].charAt(0) === '#') {
         doc = cleanDoc({ recs: parts[k].slice(1).split('.').map(unpackRec).filter(Boolean) });
         continue;
@@ -89,7 +100,7 @@
       rows.push({ memo: dec(f[0] || '').slice(0, MEMO_MAX), start: isoFrom8(f[1]), end: isoFrom8(f[2]) });
     }
     var p = { id: id, name: dec(parts[0] || '').slice(0, NAME_MAX) || '(이름 없음)', rows: rows };
-    if (doc) p.doc = doc;
+    if (doc) { if (who) { doc.name = who.name.slice(0, 40); doc.org = who.org.slice(0, 40); doc.pos = who.pos.slice(0, 40); } p.doc = doc; }
     return p;
   }
 
@@ -223,7 +234,7 @@
           ref: state.ref || '',
           people: state.people.map(function (p) {
             var o = { id: p.id, name: p.name, rows: p.rows.map(function (r) { return { memo: r.memo || '', start: r.start || '', end: r.end || '' }; }) };
-            if (p.doc && p.doc.recs && p.doc.recs.length) o.doc = { recs: p.doc.recs.map(function (r) { return { k: r.k, s: r.s, e: r.e || '', x: r.x ? 1 : 0 }; }) };
+            if (p.doc && p.doc.recs && p.doc.recs.length) o.doc = { name: p.doc.name || '', org: p.doc.org || '', pos: p.doc.pos || '', recs: p.doc.recs.map(function (r) { return { k: r.k, s: r.s, e: r.e || '', x: r.x ? 1 : 0 }; }) };
             return o;
           })
         };
@@ -246,7 +257,8 @@
   function init() {
     var mode = getMode(), notice = '';
     var cookieOk = cookiesWork(), lsOk = lsWork();
-    if (!mode) mode = 'cookie';
+    // 기본은 브라우저 저장소. 단, 이전 버전에서 쿠키로 저장한 데이터가 있으면 그대로 쿠키를 유지(데이터 보존)
+    if (!mode) mode = (/(?:^|;\s*)cc_i=/.test(root.document.cookie || '') ? 'cookie' : 'local');
     if (mode === 'cookie' && !cookieOk) {
       if (lsOk) { mode = 'local'; notice = '이 환경에서는 쿠키를 사용할 수 없어 브라우저 저장소로 저장합니다. (파일을 직접 열었거나 쿠키를 차단한 경우입니다)'; }
       else notice = '쿠키와 브라우저 저장소를 모두 사용할 수 없어 저장되지 않습니다. 백업 내보내기를 이용하세요.';

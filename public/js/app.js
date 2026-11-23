@@ -430,7 +430,9 @@
     if (p.doc && p.doc.recs && p.doc.recs.length) {
       var c = PC.compute(p.doc.recs, effRef(), CC);
       lines.push('인사기록 PDF 기준 (기준일 ' + CC.fmtIso(effRef()) + ')');
-      [['total', '총경력'], ['buzang', '부장 경력'], ['violence', '학교폭력 경력']].forEach(function (d) {
+      var who = [p.doc.name, p.doc.org, p.doc.pos].filter(Boolean).join(' · ');
+      if (who) lines.push(who);
+      [['total', '총경력'], ['buzang', '부장 경력'], ['violence', '학교폭력 경력'], ['dispatch', '파견 경력'], ['leave', '휴직 경력'], ['pro', '전문직 경력']].forEach(function (d) {
         lines.push(d[1] + ': ' + fmtTotal(c[d[0]].sum) + ' (인정 ' + fmtRecog(c[d[0]].rec) + ')');
       });
     }
@@ -480,7 +482,7 @@
       app: 'career-calc', version: 1, exportedAt: new Date().toISOString(), ref: store.ref || '',
       people: store.people.map(function (p) {
         var o = { name: p.name, rows: p.rows.filter(function (r) { return r.memo || r.start || r.end; }).map(function (r) { return { memo: r.memo || '', start: r.start || '', end: r.end || '' }; }) };
-        if (p.doc && p.doc.recs && p.doc.recs.length) o.doc = { recs: p.doc.recs.map(function (r) { return { k: r.k, s: r.s, e: r.e || '', x: r.x ? 1 : 0 }; }) };
+        if (p.doc && p.doc.recs && p.doc.recs.length) o.doc = { name: p.doc.name || '', org: p.doc.org || '', pos: p.doc.pos || '', recs: p.doc.recs.map(function (r) { return { k: r.k, s: r.s, e: r.e || '', x: r.x ? 1 : 0 }; }) };
         return o;
       })
     };
@@ -536,7 +538,7 @@
   });
 
   /* ---------- 인사기록 PDF ---------- */
-  var KIND = { S: '재직', B: '재직·부장', L: '휴직 등(차감)', V: '학교폭력' };
+  var KIND = { S: '재직', B: '재직·부장', D: '재직·파견', J: '재직·전문직', L: '휴직 등(차감)', V: '학교폭력', M: '군 복무' };
   var pdfMode = 'current', pdfLib = null;
 
   function setDocMsg(t) { $('#docMsg').textContent = t || ''; }
@@ -568,7 +570,22 @@
 
     var c = PC.compute(recs, effRef(), CC);
     var grid = $('#sumGrid'); grid.textContent = '';
-    [['total', '총경력', 't', '재직 기간에서 휴직 등을 뺀 기간'], ['buzang', '부장 경력', 'b', '부장교사·부장담임 보직 기간'], ['violence', '학교폭력 경력', 'v', '학교폭력예방및기여 가산점 기간']].forEach(function (d) {
+    var who = [p.doc.name, p.doc.org, p.doc.pos].filter(Boolean);
+    var wb = $('#docWho'); wb.textContent = '';
+    wb.hidden = !who.length;
+    if (who.length) {
+      wb.appendChild(h('b', { class: 'who-name', text: p.doc.name || p.name }));
+      if (p.doc.org) wb.appendChild(h('span', { class: 'who-org', text: p.doc.org }));
+      if (p.doc.pos) wb.appendChild(h('span', { class: 'who-pos', text: p.doc.pos }));
+    }
+    var mil = recs.filter(function (r) { return r.k === 'M'; });
+    var milBox = $('#milBox'); milBox.hidden = !mil.length;
+    if (mil.length) {
+      $('#milChk').checked = mil.some(function (r) { return !r.x; });
+      $('#milInfo').textContent = mil.map(function (r) { return CC.fmtIso(r.s) + '~' + CC.fmtIso(r.e) + ' (' + recLen(r) + ')'; }).join(', ');
+    }
+    [['total', '총경력', 't', '재직 기간에서 휴직 등을 뺀 기간' + (mil.some(function (r) { return !r.x; }) ? ' · 군 경력 포함' : '')], ['buzang', '부장 경력', 'b', '부장교사·부장담임 보직 기간'], ['violence', '학교폭력 경력', 'v', '학교폭력예방및기여 가산점 기간'],
+     ['dispatch', '파견 경력', 'd', '파견·파견연장 기간 (총경력에 포함)'], ['leave', '휴직 경력', 'l', '휴직·정직·직위해제 기간 (총경력에서 차감)'], ['pro', '전문직 경력', 'j', '장학사·교육연구사 등 전문직 기간 (총경력에 포함)']].forEach(function (d) {
       var r = c[d[0]];
       var ul = h('ul');
       r.segs.forEach(function (g, i) { ul.appendChild(h('li', { text: CC.fmtSer(g.s) + '~' + CC.fmtSer(g.e) + ' (' + CC.fmtDur(r.durs[i]) + ')' })); });
@@ -581,7 +598,7 @@
     });
     $('#docNote').textContent = '기준일 ' + CC.fmtIso(effRef()) + '까지 계산 · 기준일을 바꾸면 자동으로 다시 계산됩니다 · 인정 경력은 15일 이상이면 1개월 올림';
 
-    var order = { S: 0, B: 0, L: 1, V: 2 };
+    var order = { S: 0, B: 0, D: 0, J: 0, M: 0, L: 1, V: 2 };
     var idx = recs.map(function (r, i) { return i; }).sort(function (a, b) {
       var A = recs[a], B = recs[b];
       return order[A.k] - order[B.k] || (A.s < B.s ? 1 : A.s > B.s ? -1 : 0);
@@ -598,6 +615,13 @@
     });
   }
 
+  $('#milChk').addEventListener('change', function (e) {
+    var p = current();
+    if (!p || !p.doc) return;
+    p.doc.recs.forEach(function (r) { if (r.k === 'M') r.x = e.target.checked ? 0 : 1; });
+    updateResults(); scheduleSave();
+  });
+
   $('#recBody').addEventListener('change', function (e) {
     var tr = e.target.closest('tr'), p = current();
     if (!tr || !p || !p.doc) return;
@@ -605,10 +629,28 @@
     updateResults(); scheduleSave();
   });
 
+  /** PDF의 재직 기록을 아래 입력창에 한 줄씩 채움 (휴직·가산점·군 복무는 제외) */
+  function fillRowsFromDoc(res, target) {
+    var ref = CC.isoToSer(effRef());
+    var list = res.records.filter(function (r) { return ['S', 'B', 'D', 'J'].indexOf(r.k) >= 0; })
+      .sort(function (a, b) { return a.s < b.s ? -1 : a.s > b.s ? 1 : 0; }).slice(0, MAX_ROWS);
+    if (!list.length) return 0;
+    var has = target.rows.some(function (r) { return r.memo || r.start || r.end; });
+    if (has && !confirm('아래 입력창에 이미 입력한 경력이 있습니다.\nPDF의 재직 경력 ' + list.length + '건으로 바꿀까요?\n(취소하면 입력창은 그대로 두고 PDF 분석만 반영합니다)')) return 0;
+    target.rows = list.map(function (r) {
+      var e = r.e, es = e ? CC.isoToSer(e) : null;
+      if (es != null && ref != null && es > ref) e = '';       // 기준일 이후 종료 예정 → 비워 두면 기준일까지 계산
+      return { memo: (KIND[r.k] || '재직').slice(0, ST.MEMO_MAX), start: r.s, end: e };
+    });
+    ensureRows(target);
+    return list.length;
+  }
+
   function applyDoc(res, target) {
-    target.doc = { recs: res.records };
+    var filled = fillRowsFromDoc(res, target);
+    target.doc = { name: res.name || '', org: res.org || '', pos: res.pos || '', recs: res.records };
     selectPerson(target.id);
-    var msg = 'PDF에서 경력 ' + res.records.length + '건을 읽었습니다.';
+    var msg = 'PDF에서 경력 ' + res.records.length + '건을 읽었습니다.' + (filled ? ' 아래 입력창에 재직 경력 ' + filled + '건을 채웠습니다.' : '');
     if (res.warnings.length) msg += ' ' + res.warnings.join(' ');
     setDocMsg(msg);
     toast('인사기록을 불러왔습니다.');

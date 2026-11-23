@@ -61,7 +61,7 @@
           <div class="doc-head">
             <div>
               <h3>인사기록 PDF로 한눈에 보기</h3>
-              <p class="muted small">인사카드(개인인사기록) PDF를 올리면 <b>총경력 · 부장 경력 · 학교폭력 경력</b>을 자동으로 계산합니다. 파일은 이 브라우저 안에서만 읽고 서버로 보내지 않으며, 경력 기간(날짜)만 저장합니다.</p>
+              <p class="muted small">인사카드(개인인사기록) PDF를 올리면 이름·소속과 <b>총경력 · 부장 · 학교폭력 · 파견 · 휴직 · 전문직 경력</b>을 자동으로 계산합니다. <b>PDF로 입력 시 서버에 저장하지 않습니다.</b> 파일은 이 브라우저 안에서만 읽고 서버로 보내지 않으며, 이름·소속·직위와 경력 기간(날짜)만 저장합니다.</p>
             </div>
             <div class="head-actions">
               <button type="button" class="btn primary" id="btnPdf">PDF 불러오기</button>
@@ -70,6 +70,8 @@
           </div>
           <div id="docDrop" class="drop">PDF 파일을 여기에 끌어다 놓거나 <b>PDF 불러오기</b>를 누르세요</div>
           <div id="docBody" hidden>
+            <div class="doc-who" id="docWho" hidden></div>
+            <label class="mil-box" id="milBox" hidden><input type="checkbox" id="milChk"> <b>군 경력 추가</b> <span class="muted small" id="milInfo"></span> <span class="muted small">— 체크하면 총경력에 더하고, 해제하면 뺍니다</span></label>
             <div class="sum-grid" id="sumGrid"></div>
             <p class="muted small" id="docNote"></p>
             <details class="rec-detail" id="recDetail">
@@ -162,8 +164,8 @@
         <label class="field">
           <span class="sr">저장 방식</span>
           <select id="modeSelect">
-            <option value="cookie">쿠키 (기본)</option>
-            <option value="local">브라우저 저장소 (용량 여유)</option>
+            <option value="local">브라우저 저장소 (기본)</option>
+            <option value="cookie">쿠키 (용량 한도 있음)</option>
           </select>
         </label>
         <div class="meter" id="meter" hidden>
@@ -187,7 +189,8 @@
         <button type="button" class="btn danger" id="btnWipe">저장된 모든 데이터 삭제</button>
       </div>
     </div>
-    <p class="ref">(참고) 경력 계산 — 2017 공무원보수 등의 업무지침(인사혁신처 예규 제35호, 2017.1.20) · 엑셀 ‘경력계산기(ver. 20181112)’의 계산식과 동일</p>
+    <p class="ref">(참고) 경력 계산 — 2017 공무원보수 등의 업무지침(인사혁신처 예규 제35호, 2017.1.20)</p>
+    <p class="ref">제작: 대전신계초등학교 늘봄지원실장 안영준</p>
     <div class="verbox">
       <span id="verLine" class="ver"></span>
       <details class="changelog"><summary>변경 이력</summary><ul id="changeList"></ul></details>

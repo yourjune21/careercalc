@@ -5,8 +5,9 @@
  *  - 그 밖의 내용(주민등록번호·주소 등)은 읽거나 저장하지 않습니다. 이름만 새 사람 추가용으로 읽습니다.
  *  - 모든 처리는 브라우저 안에서만 이루어집니다.
  *
- * 기록(record) 형태: { k:'S'|'B'|'L'|'V', s:'YYYY-MM-DD', e:'YYYY-MM-DD'|'' , x:0|1, lab? }
- *   S 재직(일반)  B 재직 중 부장  L 휴직 등(총경력에서 차감)  V 학교폭력예방및기여
+ * 기록(record) 형태: { k:'S'|'B'|'D'|'J'|'L'|'V'|'M', s:'YYYY-MM-DD', e:'YYYY-MM-DD'|'' , x:0|1, lab? }
+ *   S 재직(일반)  B 재직 중 부장  D 재직 중 파견  J 재직 중 전문직(장학사·교육연구사 등)
+ *   L 휴직 등(총경력에서 차감)  V 학교폭력예방및기여  M 군 복무(기본은 제외 x=1, 체크하면 총경력에 합산)
  *   e가 비어 있으면 ‘현재까지(기준일까지)’, x=1 이면 계산에서 제외
  */
 (function (root, factory) {
@@ -17,6 +18,7 @@
 
   var DATE = /^\s*(\d{4})\.(\d{2})\.(\d{2})\s*(~)?\s*$/;
   var LEAVE = /휴직|정직|직위해제/;
+  var DISPATCH = /파견/, BACK = /복귀|복직/, PRO = /장학관|장학사|교육연구관|교육연구사|전문직/;
 
   function iso(m) { return m[1] + '-' + m[2] + '-' + m[3]; }
   function norm(t) { return String(t).replace(/\s+/g, ''); }
@@ -43,13 +45,14 @@
     if (!m || nItems > 4) return null;
     if (m[2] === '경력' || m[2] === '경력사항') return 'career';
     if (m[2] === '가산점') return 'bonus';
+    if (m[2] === '병역사항') return 'military';
     return 'other';
   }
 
   /** pages: [{ items:[{str,x,y,w}] }] → { name, records, warnings } */
   function parsePages(pages) {
-    var warnings = [], name = '';
-    var secItems = { career: [], bonus: [] };
+    var warnings = [], name = '', org = '', pos = '';
+    var secItems = { career: [], bonus: [] }, milLines = [];
     var cur = 'none';
 
     pages.forEach(function (pg, pi) {
@@ -66,8 +69,17 @@
           var nm = /^([가-힣A-Za-z]{2,10})\s*\(\s*\d+\s*세/.exec(line.text);
           if (nm) name = nm[1];
         }
+        if (pi === 0 && cur === 'none') {
+          line.items.forEach(function (it, ix) {
+            var t = it.str.trim(), nx = line.items[ix + 1];
+            if (!nx) return;
+            if (t === '소속' && !org) org = nx.str.trim();
+            if (t === '직위' && !pos) pos = nx.str.trim();
+          });
+        }
         var sec = sectionOf(line.norm, line.items.length);
         if (sec) { cur = sec; return; }
+        if (cur === 'military') milLines.push(line.text);
         if (cur === 'career' || cur === 'bonus') line.items.forEach(function (i) { secItems[cur].push(i); });
       });
     });
@@ -121,7 +133,10 @@
       var txt = r.texts.slice().sort(function (a, b) { return b.y - a.y || a.x - b.x; })
         .map(function (i) { return i.str; }).join(' ');
       var t = norm(txt);
-      var k = (LEAVE.test(t) && !/복직/.test(t)) ? 'L' : (/부장/.test(t) ? 'B' : 'S');
+      var k = (LEAVE.test(t) && !/복직/.test(t)) ? 'L'
+        : (DISPATCH.test(t) && !BACK.test(t)) ? 'D'
+        : PRO.test(t) ? 'J'
+        : (/부장/.test(t) ? 'B' : 'S');
       records.push({ k: k, s: r.s, e: r.e, x: 0, lab: txt.replace(/\s+/g, ' ').slice(0, 60) });
     });
 
@@ -137,7 +152,15 @@
     });
     if (!records.some(function (r) { return r.k === 'V'; })) warnings.push('‘12. 가산점’에서 학교폭력예방및기여 기록을 찾지 못했습니다.');
 
-    return { name: name, records: records, warnings: warnings };
+    milLines.forEach(function (t) {
+      var re = /(\d{4})\.(\d{2})\.(\d{2})\s*~\s*(\d{4})\.(\d{2})\.(\d{2})/g, m;
+      while ((m = re.exec(t))) {
+        var ms = m[1] + '-' + m[2] + '-' + m[3], me = m[4] + '-' + m[5] + '-' + m[6];
+        if (ms <= me) records.push({ k: 'M', s: ms, e: me, x: 1, lab: '병역 ' + (/(현역|공익|예비역|복무)/.exec(t) || ['복무'])[0] });
+      }
+    });
+
+    return { name: name, org: org, pos: pos, records: records, warnings: warnings };
   }
 
   /** pdf.js 문서 → pages */
@@ -182,9 +205,12 @@
     }
     var leaves = CC.union(iv(kinds(['L'])));
     return {
-      total: pack(CC.subtract(CC.union(iv(kinds(['S', 'B'])), true), leaves)),
+      total: pack(CC.subtract(CC.union(iv(kinds(['S', 'B', 'D', 'J', 'M'])), true), leaves)),
       buzang: pack(CC.subtract(CC.union(iv(kinds(['B'])), true), leaves)),
-      violence: pack(CC.union(iv(kinds(['V']))))
+      violence: pack(CC.union(iv(kinds(['V'])))),
+      dispatch: pack(CC.subtract(CC.union(iv(kinds(['D'])), true), leaves)),
+      leave: pack(leaves),
+      pro: pack(CC.subtract(CC.union(iv(kinds(['J'])), true), leaves))
     };
   }
 
