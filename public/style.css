@@ -299,7 +299,7 @@ table.rows { width: 100%; border-collapse: collapse; min-width: 800px; }
 .verbox { margin: 14px 4px 0; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
 .ver { font-weight: 600; }
 @media (max-width: 860px) { .refwrap { padding: 0 12px; } }
-@media print { #btnRefToday, 
+@media print { #btnRefToday { display: none !important; } .refbar { background: transparent; padding: 0 0 6px; } .refwrap { padding: 0; margin: 0; } }
 /* 인사기록 PDF */
 .pdf-new { width: 100%; margin-top: 8px; }
 .doc-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
@@ -566,3 +566,15 @@ h2 .badge { font-size: 12px; margin-left: 6px; }
 .set-foot{text-align:right}
 @media (max-width:560px){.top-inner{flex-wrap:wrap}}
 @media print{.set-back{display:none!important}}
+
+/* 표창검정 여러 개 */
+.aw-slot{border:1px solid #d9e2e0;border-radius:10px;margin:0 0 10px;padding:8px 12px 10px;background:#fbfdfc}
+.aw-slot legend{font-weight:700;padding:0 6px;color:#0f5c5c}
+.aw-ex{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin-top:8px}
+.aw-ck{display:inline-flex;align-items:center;gap:4px;font-size:.92rem;cursor:pointer}
+.aw-ck.fixed{color:#7a8886;cursor:default}
+.award-badges{display:inline-flex;flex-wrap:wrap;gap:4px}
+.award-why{margin:4px 0 0;padding:8px 12px;border-radius:8px;background:#fdecec;border:1px solid #f2c4c4;color:#7a2a2a;font-size:.9rem}
+.award-why[hidden]{display:none}
+.award-why .why-line+.why-line{margin-top:3px}
+.award-sum .sum-line{margin:2px 0}

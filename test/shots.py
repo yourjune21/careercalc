@@ -8,7 +8,7 @@ with sync_playwright() as pw:
     pg.screenshot(path=f'/home/claude/shots/{tag}_empty.png', full_page=True)
     with pg.expect_file_chooser() as fc: pg.click('#btnPdfEmpty')
     fc.value.set_files(s); pg.wait_for_selector('#sumGrid .sum-card', timeout=20000)
-    pg.fill('#awardBase','2026-11-23'); pg.fill('#awardFrom','2024-1-1'); pg.fill('#awardTo','2024-12-31'); pg.wait_for_timeout(300)
+    pg.fill('#awardBase1','2026-11-23'); pg.fill('#awardFrom1','2024-1-1'); pg.fill('#awardTo1','2024-12-31'); pg.wait_for_timeout(300)
     pg.screenshot(path=f'/home/claude/shots/{tag}_pdf.png', full_page=True)
     m=b.new_context(viewport={'width':390,'height':800}).new_page(); m.goto('http://localhost:8787/')
     m.click('#awardToggle'); m.wait_for_timeout(200)

@@ -114,22 +114,48 @@
   document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') flushSave(); });
 
   /* ---------- 사람 목록 ---------- */
-  /* ---------- 표창 검정 ---------- */
+  /* ---------- 표창 검정 (최대 3개) ---------- */
   var AWARD_KEY = 'careerCalc.award';
-  var award = { base: '', from: '', to: '' };
-  try { var _a = JSON.parse(root_ls().getItem(AWARD_KEY) || '{}'); if (_a.merit && !_a.from) _a.from = _a.merit; ['base', 'from', 'to'].forEach(function (k) { if (CC.isoToSer(_a[k]) != null) award[k] = _a[k]; }); } catch (e) { /* noop */ }
-  function root_ls() { return window.localStorage; }
-  function saveAward() { try { root_ls().setItem(AWARD_KEY, JSON.stringify(award)); } catch (e) { /* noop */ } }
+  var AW_N = 3;
+  /** 표창 기간과 겹치면 불가로 볼 경력 (정직·직위해제는 항상 제외라 체크박스 없음) */
+  var AW_EX = [['child', '육아휴직'], ['leave', '그 외 휴직(질병·기타)'], ['disp', '파견']];
+  function newSlot() { return { base: '', from: '', to: '', ex: { child: 1, leave: 1, disp: 1 } }; }
+  var award = { slots: [] };
+  for (var _i = 0; _i < AW_N; _i++) award.slots.push(newSlot());
+  try {
+    var _a = JSON.parse(window.localStorage.getItem(AWARD_KEY) || '{}') || {};
+    var _src = Array.isArray(_a.slots) ? _a.slots : [_a];            // 예전 형식(기준일·유공기간 하나)은 검정1로
+    _src.slice(0, AW_N).forEach(function (o, i) {
+      if (!o) return;
+      if (o.merit && !o.from) o.from = o.merit;
+      ['base', 'from', 'to'].forEach(function (k) { if (CC.isoToSer(o[k]) != null) award.slots[i][k] = o[k]; });
+      if (o.ex && typeof o.ex === 'object') AW_EX.forEach(function (x) { if (x[0] in o.ex) award.slots[i].ex[x[0]] = o.ex[x[0]] ? 1 : 0; });
+    });
+  } catch (e) { /* noop */ }
+  function saveAward() { try { window.localStorage.setItem(AWARD_KEY, JSON.stringify(award)); } catch (e) { /* noop */ } }
 
   /** 검정 조건이 갖춰졌는지: 표창 기준일 + 유공기간 시작일 필요(종료일은 비우면 기준일) */
-  function awardPeriod() {
-    var bs = CC.isoToSer(award.base), fs = CC.isoToSer(award.from), ts = award.to ? CC.isoToSer(award.to) : bs;
+  function awardPeriod(sl) {
+    var bs = CC.isoToSer(sl.base), fs = CC.isoToSer(sl.from), ts = sl.to ? CC.isoToSer(sl.to) : bs;
     if (bs == null || fs == null || ts == null) return null;
     return { base: bs, from: fs, to: ts, bad: ts < fs };
   }
-  /** 사람 1명의 표창 가능 여부: null(미입력) | {status:'ok'|'no'|'unknown'|'bad', reasons:[…]} */
-  function awardCheck(p) {
-    var ap = awardPeriod();
+  /** 휴직·파견 기록의 종류: child(육아휴직) | leave(그 외 휴직) | disp(파견) | hold(정직·직위해제: 항상 제외) */
+  function recType(r) {
+    if (r.k === 'D') return 'disp';
+    var t = (r.t || '') + ' ' + (r.lab || '');
+    if (/직위해제|정직/.test(t)) return 'hold';
+    return /육아/.test(t) ? 'child' : 'leave';
+  }
+  function recName(r, ty) {
+    var t = (r.t || '').trim();
+    if (ty === 'disp') return '파견';
+    if (t) return t;
+    return { child: '육아휴직', leave: '휴직', hold: /직위해제/.test(r.lab || '') ? '직위해제' : '정직' }[ty];
+  }
+  /** 사람 1명·검정 1개의 판정: null(미입력) | {status:'ok'|'no'|'unknown'|'bad', reasons:[…]} */
+  function awardCheck(p, sl) {
+    var ap = awardPeriod(sl);
     if (!ap) return null;
     if (ap.bad) return { status: 'bad', reasons: [] };
     var recs = p.doc && p.doc.recs ? p.doc.recs : null;
@@ -137,12 +163,14 @@
     var ref = CC.isoToSer(effRef()), reasons = [];
     recs.forEach(function (r) {
       if (r.x || (r.k !== 'L' && r.k !== 'D')) return;
+      var ty = recType(r);
+      if (ty !== 'hold' && !sl.ex[ty]) return;                       // 체크 해제한 경력은 겹쳐도 무방
       var s = CC.isoToSer(r.s), e = r.e ? CC.isoToSer(r.e) : ref;
       if (s == null || e == null) return;
-      var lab = r.k === 'L' ? '휴직 등' : '파견';
+      var nm = recName(r, ty);
       var os = Math.max(s, ap.from), oe = Math.min(e, ap.to);
-      if (os <= oe) reasons.push({ label: '유공기간 중 ' + lab, s: os, e: oe });
-      if (s <= ap.base && ap.base <= e) reasons.push({ label: '기준일 당시 ' + lab, s: ap.base, e: ap.base });
+      if (os <= oe) reasons.push({ label: '유공기간 중 ' + nm, s: os, e: oe, why: '유공기간(' + CC.fmtSer(ap.from) + '~' + CC.fmtSer(ap.to) + ') 중 ' + nm + '(' + CC.fmtSer(s) + '~' + CC.fmtSer(e) + ')과 ' + CC.fmtDur(CC.diff(os, oe)) + ' 겹침' });
+      if (s <= ap.base && ap.base <= e) reasons.push({ label: '기준일 당시 ' + nm, s: ap.base, e: ap.base, why: '표창 기준일(' + CC.fmtSer(ap.base) + ')이 ' + nm + ' 기간(' + CC.fmtSer(s) + '~' + CC.fmtSer(e) + ') 안에 있음' });
     });
     reasons.sort(function (a, b) { return a.s - b.s; });
     return { status: reasons.length ? 'no' : 'ok', reasons: reasons };
@@ -150,62 +178,118 @@
   function awardText(res) {
     return res.reasons.map(function (g) { return g.label + ' ' + CC.fmtSer(g.s) + '~' + CC.fmtSer(g.e); }).join(' / ');
   }
-  /** 이름 옆 작은 표시 (small=true: 보관함용) */
+  /** 입력된 검정별 판정 목록 */
+  function awardResults(p) {
+    var out = [];
+    award.slots.forEach(function (sl, i) { var r = awardCheck(p, sl); if (r) out.push({ i: i, res: r }); });
+    return out;
+  }
+  function awardTitleOf(r) { return r.status === 'no' ? awardText(r) : (r.status === 'unknown' ? '인사기록 PDF가 없어 확인할 수 없습니다' : '선택한 경력과 겹치지 않음'); }
+  /** 이름 옆 작은 표시: 검정마다 하나씩 */
   function awardBadge(p, small) {
-    var res = awardCheck(p);
-    if (!res || res.status === 'bad') return null;
+    var list = awardResults(p).filter(function (x) { return x.res.status !== 'bad'; });
+    if (!list.length) return null;
     var map = { ok: ['✓ 표창가능', 'ok'], no: ['✕ 표창불가', 'no'], unknown: ['? 확인불가', 'unk'] };
-    var m = map[res.status];
-    return h('span', { class: 'badge ' + m[1], text: m[0], title: res.status === 'no' ? awardText(res) : (res.status === 'unknown' ? '인사기록 PDF가 없어 확인할 수 없습니다' : '해당 기간에 휴직·파견 없음') });
+    return h('span', { class: 'award-badges' }, list.map(function (x) {
+      var m = map[x.res.status];
+      return h('span', { class: 'badge ' + m[1], text: (list.length > 1 || x.i > 0 ? '검정' + (x.i + 1) + ' ' : '') + m[0], title: awardTitleOf(x.res) });
+    }));
   }
   function setTitleBadge(p) {
-    var el = $('#personAward'), b = awardBadge(p);
+    var el = $('#personAward'), why = $('#personAwardWhy'), b = awardBadge(p);
+    el.textContent = ''; why.textContent = '';
     el.hidden = !b;
-    if (b) { el.className = b.className; el.textContent = b.textContent; el.title = b.title; }
+    if (b) el.appendChild(b);
+    var lines = awardResults(p).filter(function (x) { return x.res.status === 'no'; });
+    why.hidden = !lines.length;
+    lines.forEach(function (x) {
+      why.appendChild(h('div', { class: 'why-line' }, h('b', { text: '표창검정' + (x.i + 1) + ' 불가: ' }), x.res.reasons.map(function (g) { return g.why; }).join(' · ')));
+    });
   }
   function renderAward() {
     var sum = $('#awardSum'), ul = $('#awardList');
-    ul.textContent = '';
-    var ap = awardPeriod();
+    ul.textContent = ''; sum.textContent = '';
     var chip = $('#awardChip'); chip.textContent = ''; chip.className = 'award-chip';
-    sum.className = 'award-sum muted small';
-    if (!ap) { sum.textContent = '표창 기준일과 유공기간 시작일을 입력하면 판정합니다.'; return; }
-    if (ap.bad) { sum.className = 'award-sum bad small'; sum.textContent = '유공기간 종료일이 시작일보다 빠릅니다. 날짜를 확인하세요.'; return; }
-    sum.className = 'award-sum';
-    var cnt = { ok: 0, no: 0, unknown: 0 };
-    store.people.forEach(function (p) {
-      var res = awardCheck(p); cnt[res.status]++;
-      var label = { ok: '✓ 표창가능', no: '✕ 표창불가', unknown: '? 확인불가(PDF 없음)' }[res.status];
-      ul.appendChild(h('li', null, h('button', { type: 'button', class: 'award-item', 'data-id': p.id },
-        h('span', { class: 'p-name', text: p.name }),
-        h('span', { class: 'badge ' + ({ ok: 'ok', no: 'no', unknown: 'unk' }[res.status]), text: label }),
-        h('span', { class: 'muted small', text: res.status === 'no' ? awardText(res) : '' }))));
+    var active = [];
+    award.slots.forEach(function (sl, i) {
+      var ap = awardPeriod(sl);
+      if (!ap) return;
+      if (ap.bad) { sum.appendChild(h('div', { class: 'bad small', text: '표창검정' + (i + 1) + ': 유공기간 종료일이 시작일보다 빠릅니다. 날짜를 확인하세요.' })); return; }
+      active.push(i);
     });
-    chip.textContent = '불가 ' + cnt.no + ' · 가능 ' + cnt.ok + (cnt.unknown ? ' · 확인불가 ' + cnt.unknown : '');
-    chip.className = 'award-chip on' + (cnt.no ? ' has-no' : '');
-    sum.textContent = '기준일 ' + CC.fmtIso(award.base) + ' · 유공기간 ' + CC.fmtSer(ap.from) + '~' + CC.fmtSer(ap.to) + ' · 표창가능 ' + cnt.ok + '명 · 표창불가 ' + cnt.no + '명 · 확인불가 ' + cnt.unknown + '명';
+    if (!active.length && !sum.children.length) { sum.className = 'award-sum muted small'; sum.textContent = '표창 기준일과 유공기간 시작일을 입력하면 판정합니다. (표창검정 3개까지)'; return; }
+    sum.className = 'award-sum';
+    var any = { ok: 0, no: 0, unknown: 0 };
+    active.forEach(function (i) {
+      var sl = award.slots[i], ap = awardPeriod(sl), cnt = { ok: 0, no: 0, unknown: 0 };
+      store.people.forEach(function (p) { cnt[awardCheck(p, sl).status]++; });
+      sum.appendChild(h('div', { class: 'sum-line', text: '표창검정' + (i + 1) + ' · 기준일 ' + CC.fmtIso(sl.base) + ' · 유공기간 ' + CC.fmtSer(ap.from) + '~' + CC.fmtSer(ap.to) + ' · 표창가능 ' + cnt.ok + '명 · 표창불가 ' + cnt.no + '명 · 확인불가 ' + cnt.unknown + '명' }));
+    });
+    store.people.forEach(function (p) {
+      var rs = awardResults(p).filter(function (x) { return x.res.status !== 'bad'; });
+      if (!rs.length) return;
+      var st = rs.some(function (x) { return x.res.status === 'no'; }) ? 'no' : rs.some(function (x) { return x.res.status === 'unknown'; }) ? 'unknown' : 'ok';
+      any[st]++;
+      var why = rs.filter(function (x) { return x.res.status === 'no'; }).map(function (x) { return '검정' + (x.i + 1) + ': ' + awardText(x.res); }).join(' / ');
+      ul.appendChild(h('li', null, h('button', { type: 'button', class: 'award-item', 'data-id': p.id },
+        h('span', { class: 'p-name', text: p.name }), awardBadge(p, true),
+        h('span', { class: 'muted small', text: why }))));
+    });
+    chip.textContent = '불가 ' + any.no + ' · 가능 ' + any.ok + (any.unknown ? ' · 확인불가 ' + any.unknown : '');
+    chip.className = 'award-chip on' + (any.no ? ' has-no' : '');
   }
   $('#awardToggle').addEventListener('click', function () {
     var box = $('#awardBox'), open = box.hidden;
     box.hidden = !open; this.setAttribute('aria-expanded', open ? 'true' : 'false');
     this.classList.toggle('open', open);
-    if (open) $('#awardBase').focus();
+    if (open) $('#awardBase1').focus();
   });
   function awardRefresh() { renderPeople(); var p = current(); if (p) setTitleBadge(p); }
-  [['#awardBase', 'base'], ['#awardFrom', 'from'], ['#awardTo', 'to']].forEach(function (d) {
-    var el = $(d[0]);
-    if (award[d[1]]) el.value = CC.fmtIso(award[d[1]]);
-    el.addEventListener('input', function () {
-      var t = el.value.trim(), iso = CC.parseDate(t);
-      if (!t) { award[d[1]] = ''; el.classList.remove('invalid'); saveAward(); awardRefresh(); }
-      else if (iso) { award[d[1]] = iso; el.classList.remove('invalid'); saveAward(); awardRefresh(); }
+  /* 검정 입력칸 3벌 만들기 */
+  (function () {
+    var box = $('#awardSlots');
+    award.slots.forEach(function (sl, i) {
+      var n = i + 1;
+      var base = h('input', { id: 'awardBase' + n, type: 'text', class: 'f-award', inputmode: 'numeric', autocomplete: 'off', placeholder: '예: 2026-8-31' });
+      var from = h('input', { id: 'awardFrom' + n, type: 'text', class: 'f-award', inputmode: 'numeric', autocomplete: 'off', placeholder: '시작일', 'aria-label': '표창검정' + n + ' 유공기간 시작일' });
+      var to = h('input', { id: 'awardTo' + n, type: 'text', class: 'f-award', inputmode: 'numeric', autocomplete: 'off', placeholder: '종료일 (비우면 기준일)', 'aria-label': '표창검정' + n + ' 유공기간 종료일' });
+      var checks = AW_EX.map(function (x) {
+        var cb = h('input', { type: 'checkbox', id: 'awardEx' + n + x[0], 'data-s': i, 'data-k': x[0] });
+        cb.checked = !!sl.ex[x[0]];
+        return h('label', { class: 'aw-ck' }, cb, ' ' + x[1]);
+      });
+      var hold = h('input', { type: 'checkbox', checked: true, disabled: true });
+      box.appendChild(h('fieldset', { class: 'aw-slot' },
+        h('legend', { text: '표창검정' + n }),
+        h('div', { class: 'award-grid' },
+          h('div', { class: 'af' }, h('label', { for: 'awardBase' + n, text: '표창 기준일' }), base),
+          h('div', { class: 'af' }, h('label', { for: 'awardFrom' + n }, '유공기간 ', h('span', { class: 'muted small', text: '(시작일 ~ 종료일)' })), h('div', { class: 'range' }, from, h('span', { 'aria-hidden': 'true', text: '~' }), to)),
+          h('button', { type: 'button', class: 'btn ghost', id: 'awardClear' + n, text: '지우기' })),
+        h('div', { class: 'aw-ex' }, h('span', { class: 'muted small', text: '겹치면 불가로 볼 경력:' }), checks,
+          h('label', { class: 'aw-ck fixed', title: '정직·직위해제는 항상 불가입니다' }, hold, ' 정직·직위해제(항상 제외)'))));
+      [[base, 'base'], [from, 'from'], [to, 'to']].forEach(function (d) {
+        var el = d[0], k = d[1];
+        if (sl[k]) el.value = CC.fmtIso(sl[k]);
+        el.addEventListener('input', function () {
+          var t = el.value.trim(), iso = CC.parseDate(t);
+          if (!t) { sl[k] = ''; el.classList.remove('invalid'); saveAward(); awardRefresh(); }
+          else if (iso) { sl[k] = iso; el.classList.remove('invalid'); saveAward(); awardRefresh(); }
+        });
+        el.addEventListener('blur', function () {
+          var t = el.value.trim(), iso = CC.parseDate(t);
+          if (!t) { el.classList.remove('invalid'); return; }
+          if (iso) { el.value = CC.fmtIso(iso); el.classList.remove('invalid'); } else { el.classList.add('invalid'); toast('날짜 형식을 확인하세요. 예: 2026-8-31, 26/8/31'); }
+        });
+      });
+      $('#awardClear' + n).addEventListener('click', function () {
+        sl.base = sl.from = sl.to = ''; base.value = from.value = to.value = ''; saveAward(); awardRefresh();
+      });
     });
-    el.addEventListener('blur', function () {
-      var t = el.value.trim(), iso = CC.parseDate(t);
-      if (!t) { el.classList.remove('invalid'); return; }
-      if (iso) { el.value = CC.fmtIso(iso); el.classList.remove('invalid'); } else { el.classList.add('invalid'); toast('날짜 형식을 확인하세요. 예: 2026-8-31, 26/8/31'); }
+    box.addEventListener('change', function (e) {
+      var cb = e.target; if (!cb.dataset || cb.dataset.k == null) return;
+      award.slots[+cb.dataset.s].ex[cb.dataset.k] = cb.checked ? 1 : 0; saveAward(); awardRefresh();
     });
-  });
+  })();
   $('#groupChk').addEventListener('change', function (e) {
     var p = current();
     var want = e.target.checked;
@@ -219,9 +303,6 @@
     toast(want ? '카테고리별로 묶어 다시 채웠습니다.' : '원본 행 그대로 다시 채웠습니다.');
   });
   $('#rowsFold').addEventListener('toggle', function () { var p = current(); if (p) updateResults(); });
-  $('#awardClear').addEventListener('click', function () {
-    award.base = ''; award.from = ''; award.to = ''; $('#awardBase').value = ''; $('#awardFrom').value = ''; $('#awardTo').value = ''; saveAward(); awardRefresh();
-  });
   $('#awardList').addEventListener('click', function (e) {
     var b = e.target.closest('.award-item'); if (b) selectPerson(+b.dataset.id);
   });
@@ -938,15 +1019,15 @@
     var mil = recs.filter(function (r) { return r.k === 'M'; });
     var ed = a ? editedFromRows(p, a, recs) : null;
     var tbody = h('tbody');
-    [['total', '총경력', 't', '입력창에서 체크한 줄을 모두 포함 (중복은 한 번만)'],
-     ['actual', '실재직 경력', 'a', '총경력에서 휴직·군 경력을 뺀 실제 근무 기간'],
-     ['buzang', '부장 경력', 'b', '부장교사·부장담임 보직 기간'],
-     ['research', '연구학교 경력', 'r', '12.가산점 ‘연구·시범학교’ 기간'],
-     ['violence', '학교폭력 예방기여 경력', 'v', '학교폭력예방및기여 가산점 기간'],
-     ['mil', '군 경력', 'm', '병역사항 복무 기간 (총경력에 미포함 · 입력창에서 체크하면 합계에 반영)'],
-     ['dispatch', '파견 경력', 'd', '파견·파견연장 기간 (총경력에 포함)'],
-     ['leave', '휴직 경력', 'l', '휴직·정직·직위해제 기간 (총경력에서 차감)'],
-     ['pro', '전문직 경력', 'j', '장학사·교육연구사 등 전문직 기간 (총경력에 포함)']].filter(function (d) { return (d[0] !== 'pro' || c.pro.segs.length) && (d[0] !== 'mil' || mil.length); }).sort(function (x, y) { var o = getOrder(); return o.indexOf(x[2]) - o.indexOf(y[2]); }).forEach(function (d) {
+    [['total', '총계', 't', '입력창에서 체크한 줄을 모두 포함 (중복은 한 번만)'],
+     ['actual', '실재직', 'a', '총경력에서 휴직·군 경력을 뺀 실제 근무 기간'],
+     ['buzang', '부장', 'b', '부장교사·부장담임 보직 기간'],
+     ['research', '연구학교', 'r', '12.가산점 ‘연구·시범학교’ 기간'],
+     ['violence', '학교폭력 예방기여', 'v', '학교폭력예방및기여 가산점 기간'],
+     ['mil', '군', 'm', '병역사항 복무 기간 (총경력에 미포함 · 입력창에서 체크하면 합계에 반영)'],
+     ['dispatch', '파견', 'd', '파견·파견연장 기간 (총경력에 포함)'],
+     ['leave', '휴직', 'l', '휴직·정직·직위해제 기간 (총경력에서 차감)'],
+     ['pro', '전문직', 'j', '장학사·교육연구사 등 전문직 기간 (총경력에 포함)']].filter(function (d) { return (d[0] !== 'pro' || c.pro.segs.length) && (d[0] !== 'mil' || mil.length); }).sort(function (x, y) { var o = getOrder(); return o.indexOf(x[2]) - o.indexOf(y[2]); }).forEach(function (d) {
       var r = c[d[0]];
       var ul = h('ul');
       r.segs.forEach(function (g, i) { ul.appendChild(h('li', { text: CC.fmtSer(g.s) + '~' + CC.fmtSer(g.e) + ' (' + CC.fmtDur(r.durs[i]) + ')' })); });
