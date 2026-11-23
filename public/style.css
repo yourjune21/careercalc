@@ -280,3 +280,6 @@ table.rows { width: 100%; border-collapse: collapse; min-width: 800px; }
 
 .mil-box { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-top: 10px; padding: 8px 14px; border: 1px dashed var(--line); border-radius: 10px; cursor: pointer; }
 .kind.M { background: #e8e8ee; color: #444; }
+
+.empty-drop { margin-top: 18px; text-align: center; }
+.empty-drop .btn { margin-top: 8px; }

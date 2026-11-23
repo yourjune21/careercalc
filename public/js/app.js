@@ -691,6 +691,7 @@
   }
 
   $('#btnPdf').addEventListener('click', function () { pdfMode = 'current'; $('#pdfFile').click(); });
+  $('#btnPdfEmpty').addEventListener('click', function () { pdfMode = 'new'; $('#pdfFile').click(); });
   $('#btnPdfNew').addEventListener('click', function () { pdfMode = 'new'; $('#pdfFile').click(); });
   $('#pdfFile').addEventListener('change', function (e) {
     var f = e.target.files[0]; e.target.value = '';
@@ -713,6 +714,7 @@
     });
   }
   dropTarget($('#docCard'), false);
+  dropTarget($('#emptyDrop'), true);
   dropTarget($('.people'), true);
   // 파일을 카드 밖에 놓았을 때 브라우저가 PDF를 열어 버리지 않도록
   window.addEventListener('dragover', function (e) { e.preventDefault(); });

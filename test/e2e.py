@@ -13,6 +13,7 @@ with sync_playwright() as pw:
     pg.on('pageerror', lambda e: logs.append(('pageerror',str(e))))
     pg.goto(URL)
     check('empty state shown', pg.locator('#empty').is_visible())
+    check('빈 상태에서 PDF 첨부창', pg.locator('#emptyDrop').is_visible() and pg.locator('#btnPdfEmpty').is_visible())
     check('기본 저장 방식=브라우저 저장소', pg.locator('#modeSelect').input_value()=='local')
     pg.select_option('#modeSelect','cookie')
     # 사람 추가
@@ -90,13 +91,14 @@ with sync_playwright() as pw:
     check('기준일 변경 즉시 재계산', [r0.locator('.res-'+k).inner_text() for k in 'ymd']==['0','2','0'], [r0.locator('.res-'+k).inner_text() for k in 'ymd'])
     pg.wait_for_timeout(600); pg.reload()
     check('기준일 유지(쿠키)', pg.input_value('#refDate')=='2026. 4. 30.', pg.input_value('#refDate'))
-    check('버전 표시', 'v1.9.0' in pg.inner_text('#verLine'), pg.inner_text('#verLine'))
+    check('버전 표시', 'v1.9.1' in pg.inner_text('#verLine'), pg.inner_text('#verLine'))
     # 인사기록 PDF (환경변수 PDF_SAMPLE 로 실제 파일 경로를 줄 때만 실행 — 개인정보 파일은 저장소에 넣지 않음)
     import os
     sample=os.environ.get('PDF_SAMPLE')
     if sample:
         pg.fill('#refDate','2026-11-23'); pg.press('#refDate','Tab')
         pg.on('dialog', lambda d: d.accept())
+        if False: pass
         pg.set_input_files('#pdfFile', sample)
         pg.wait_for_selector('#sumGrid .sum-card', timeout=20000)
         vals=pg.locator('#sumGrid .sum-value').all_inner_texts()
