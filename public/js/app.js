@@ -550,6 +550,7 @@
     if (store.people.length >= MAX_PEOPLE) { toast('최대 ' + MAX_PEOPLE + '명까지 저장할 수 있습니다.'); return; }
     var id = ST.nextId(store.people);
     store.people.push({ id: id, name: name.slice(0, ST.NAME_MAX), rows: blankRows(START_ROWS) });
+    setFold(id, true);      // 이름으로 시작한 사람은 인사기록 카드를 접어서 시작
     input.value = '';
     search = ''; $('#peopleSearch').value = '';
     selectPerson(id);
@@ -736,7 +737,21 @@
     return CC.fmtDur(CC.diff(s, e)) + note;
   }
 
+  var FOLD_KEY = 'careerCalc.docFold';
+  function loadFold() { try { return JSON.parse(localStorage.getItem(FOLD_KEY) || '{}') || {}; } catch (e) { return {}; } }
+  function setFold(id, collapsed) {
+    var m = loadFold();
+    if (collapsed) m[id] = 1; else delete m[id];
+    try { localStorage.setItem(FOLD_KEY, JSON.stringify(m)); } catch (e) { /* noop */ }
+  }
+  function applyFold(p) {
+    var c = loadFold()[p.id] === 1;
+    $('#docCard').classList.toggle('collapsed', c);
+    $('#docInner').hidden = c;
+    var b = $('#btnDocFold'); b.textContent = c ? '펼치기' : '접기'; b.setAttribute('aria-expanded', c ? 'false' : 'true');
+  }
   function renderDoc(p) {
+    applyFold(p);
     var recs = p.doc && p.doc.recs && p.doc.recs.length ? p.doc.recs : null;
     $('#docDrop').hidden = !!recs;
     $('#docBody').hidden = !recs;
@@ -819,7 +834,7 @@
   var CAT_MEMO = { S: '재직', H: '재직', B: '부장', D: '파견', J: '전문직' };
   function catOf(memo) {
     var m = String(memo || '').trim();
-    return /^부장/.test(m) ? 'b' : /^파견/.test(m) ? 'd' : /^전문직/.test(m) ? 'j' : /^재직/.test(m) ? 's' : '';
+    return /^부장/.test(m) ? 'b' : /^파견/.test(m) ? 'd' : /^전문직/.test(m) ? 'j' : /^휴직/.test(m) ? 'l' : /^재직/.test(m) ? 's' : '';
   }
   /**
    * 기록(recs) → 입력창 행.
@@ -854,8 +869,8 @@
         .forEach(function (r) { if (seen.indexOf(r.d) < 0) seen.push(r.d); });
       return !seen.length ? '' : seen.length === 1 ? seen[0] : seen[0] + ' 외 ' + (seen.length - 1) + '곳';
     }
-    function push(memo, g, open, ord, kinds) {
-      rows.push({ memo: memo.slice(0, ST.MEMO_MAX), dept: deptFor(kinds, g), start: CC.serToIso(g.s), end: (open && g.e === ref) ? '' : CC.serToIso(g.e), _s: g.s, _o: ord });
+    function push(memo, g, open, ord, kinds, off) {
+      rows.push({ memo: memo.slice(0, ST.MEMO_MAX), off: off ? 1 : 0, dept: deptFor(kinds, g), start: CC.serToIso(g.s), end: (open && g.e === ref) ? '' : CC.serToIso(g.e), _s: g.s, _o: ord });
     }
     var ORDER = ['S', 'B', 'D', 'J'];
     if (grouped) {
@@ -869,6 +884,8 @@
       // 재직은 부장·파견·전문직 기간까지 이어서 한 줄로 둔다(잘라 나누면 월·일 환산이 달라져 PDF 카드와 합계가 어긋남)
       base.forEach(function (g) { push(CAT_MEMO.S, g, openAtRef(all), 0, ['S', 'H']); });
       ['B', 'D', 'J'].forEach(function (k, i) { parts[k].segs.forEach(function (g) { push(CAT_MEMO[k], g, parts[k].open, i + 1, [k]); }); });
+      // 휴직·정직·직위해제: 기본은 산입 안 함(체크 해제) — 체크하면 그 기간이 경력에 더해짐
+      CC.union(plain(segsOf(['L'])), true).forEach(function (g) { push('휴직', g, openAtRef(segsOf(['L'])), 4, ['L'], true); });
       rows.sort(function (a, b) { return a._o - b._o || a._s - b._s; });
     } else {
       use.forEach(function (r) {
@@ -877,9 +894,13 @@
         var k = r.k === 'H' ? 'S' : r.k;
         CC.subtract([{ s: g.s, e: g.e }], leaves).forEach(function (x) { push(CAT_MEMO[k], x, g.open, ORDER.indexOf(k), r.k === 'H' ? ['H'] : [r.k]); });
       });
+      use.forEach(function (r) {
+        if (r.k !== 'L') return;
+        var g = toSeg(r); if (g) push('휴직', g, g.open, 4, ['L'], true);
+      });
       rows.sort(function (a, b) { return a._s - b._s || a._o - b._o; });
     }
-    return rows.slice(0, MAX_ROWS).map(function (x) { return { memo: x.memo, dept: x.dept, start: x.start, end: x.end }; });
+    return rows.slice(0, MAX_ROWS).map(function (x) { return { memo: x.memo, dept: x.dept, start: x.start, end: x.end, off: x.off }; });
   }
   function sameRows(a, b) {
     var f = function (list) { return list.filter(function (r) { return r.memo || r.start || r.end; }).map(function (r) { return r.memo + '|' + r.start + '|' + r.end + (r.off ? '|off' : ''); }).join(';'); };
@@ -898,6 +919,7 @@
 
   function applyDoc(res, target) {
     var filled = fillRowsFromDoc(res, target);
+    setFold(target.id, false);   // PDF 결과가 생기면 펼쳐서 보여 줌
     target.doc = { name: res.name || '', org: res.org || '', pos: res.pos || '', recs: res.records };
     selectPerson(target.id);
     var msg = 'PDF에서 경력 ' + res.records.length + '건을 읽었습니다.' + (res.records.some(function (r) { return r.k === 'H'; }) ? ' 첫 채용 기간은 이후 경력과 겹쳐 자동 제외했습니다.' : '') + (filled ? ' 아래 입력창에 재직 경력 ' + filled + '줄을 채웠습니다.' : '');
@@ -942,6 +964,7 @@
         var nm = (res.name || 'PDF 인사기록').slice(0, ST.NAME_MAX);
         target = { id: ST.nextId(store.people), name: uniqueName(nm), rows: blankRows(START_ROWS) };
         store.people.push(target);
+        setFold(target.id, false);
         toast('새 사람 ‘' + target.name + '’(으)로 추가했습니다.');
       }
       applyDoc(res, target);
@@ -956,6 +979,10 @@
 
   $('#btnPdf').addEventListener('click', function () { pdfMode = 'auto'; $('#pdfFile').click(); });
   $('#btnPdfEmpty').addEventListener('click', function () { pdfMode = 'new'; $('#pdfFile').click(); });
+  $('#btnDocFold').addEventListener('click', function () {
+    var p = current(); if (!p) return;
+    setFold(p.id, loadFold()[p.id] !== 1); applyFold(p);
+  });
   $('#btnBlank').addEventListener('click', function () {
     store.selected = 0; setDocMsg(''); scheduleSave(); renderAll();
     $('#newName').focus(); window.scrollTo({ top: 0, behavior: 'smooth' });

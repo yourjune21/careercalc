@@ -387,3 +387,14 @@ h2 .badge { font-size: 12px; margin-left: 6px; }
 .rows tr.row-off td:not(.c-use):not(.c-del) { opacity: .45; }
 .rows tr.row-off .c-memo input, .rows tr.row-off .c-date input { text-decoration: line-through; }
 @media (max-width: 700px) { .rows .c-use { grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; padding: 0; width: auto; } .rows .c-use::after { content: '경력에 포함'; font-size: 12px; color: var(--muted); } }
+
+/* 휴직 줄 */
+.cat-l, tr[data-cat="l"] { --cc: #a23b3b; }
+.rows tr[data-cat="l"] td.c-no { box-shadow: inset 5px 0 0 var(--cc); }
+.rows tr[data-cat="l"] .c-memo input { border-left: 4px solid var(--cc); font-weight: 600; color: var(--cc); }
+@media (max-width: 700px) { .rows tr[data-cat="l"] { border-left: 6px solid var(--cc); } }
+
+/* 인사기록 카드 접기 */
+#docCard.collapsed .doc-intro { display: none; }
+#docCard.collapsed { padding-bottom: 10px; }
+#docInner[hidden] { display: none; }
