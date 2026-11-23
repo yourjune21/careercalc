@@ -537,3 +537,15 @@ h2 .badge { font-size: 12px; margin-left: 6px; }
 @media print {
   .ps-sum thead th.m { color: #5a6b7d; border-bottom-color: #5a6b7d; background: #edf0f4 !important; } .ps-sum td.m { background: #f6f8fa !important; color: #3f4d5c; }
 }
+
+/* 실재직 경력 */
+.sum-card.a { --c: #2f4fb8; --bg: #eaeffc; --bd: #c3cff2; }
+.total-actual { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 20px; margin-top: 10px; padding: 9px 16px; border-radius: 10px; border: 1px solid #c3cff2; background: #eef2fd; color: #25398a; font-size: 13px; }
+.total-actual[hidden] { display: none; }
+.act-tag { align-self: center; font-size: 11px; font-weight: 700; color: #fff; background: #2f4fb8; padding: 2px 10px; border-radius: 99px; letter-spacing: .04em; }
+.total-actual b { font-size: 17px; color: #1b2c6e; }
+.act-note { flex-basis: 100%; font-size: 11.5px; color: #5b6aa6; }
+@media (min-width: 761px) { .act-note { flex-basis: auto; margin-left: auto; } }
+@media print {
+  .ps-sum thead th.a { color: #2f4fb8; border-bottom-color: #2f4fb8; background: #eaeffc !important; } .ps-sum td.a { background: #f5f7fe !important; color: #25398a; }
+}

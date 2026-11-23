@@ -375,7 +375,15 @@
   function violenceRecog(t) { return t.years + '년'; }
   function fmtRecog(r) { return r.years + '년 ' + r.months + '개월'; }
 
+  function renderActual(p, a) {
+    var box = $('#actualBox'), z = actualFrom(p, a);
+    box.hidden = !(z.hasEx && a.okCount);
+    if (box.hidden) return;
+    $('#actualValue').textContent = fmtTotal(z.actual.sum);
+    $('#actualRecog').textContent = fmtRecog(z.actual.rec);
+  }
   function renderTotal(p, a) {
+    renderActual(p, a);
     var ex = $('#totalExplain');
     var hasDoc = !!(p.doc && p.doc.recs && p.doc.recs.length);
     $('#totalHelp').hidden = !hasDoc;
@@ -585,11 +593,11 @@
       lines.push('경고) ' + (o.i + 1) + '번↔' + (o.j + 1) + '번 ' + CC.fmtSer(o.s) + '~' + CC.fmtSer(o.e) + ' (' + CC.fmtDur(o.dur) + ' 중복)');
     });
     if (p.doc && p.doc.recs && p.doc.recs.length) {
-      var c = PC.compute(p.doc.recs, effRef(), CC);
+      var c = docCompute(p, a, p.doc.recs), hasMil = p.doc.recs.some(function (r) { return r.k === 'M'; });
       lines.push('인사기록 PDF 기준 (기준일 ' + CC.fmtIso(effRef()) + ')');
       var who = [p.doc.name, p.doc.org, p.doc.pos].filter(Boolean).join(' · ');
       if (who) lines.push(who);
-      [['total', '총경력'], ['buzang', '부장 경력'], ['research', '연구학교 경력'], ['violence', '학교폭력 예방기여 경력'], ['dispatch', '파견 경력'], ['leave', '휴직 경력'], ['pro', '전문직 경력']].filter(function (d) { return (d[0] !== 'pro' || c.pro.segs.length) && (d[0] !== 'mil' || mil.length); }).forEach(function (d) {
+      [['total', '총경력(체크한 줄 모두 포함)'], ['actual', '실재직 경력(휴직·군 경력 제외)'], ['buzang', '부장 경력'], ['research', '연구학교 경력'], ['violence', '학교폭력 예방기여 경력'], ['mil', '군 경력'], ['dispatch', '파견 경력'], ['leave', '휴직 경력'], ['pro', '전문직 경력']].filter(function (d) { return (d[0] !== 'pro' || c.pro.segs.length) && (d[0] !== 'mil' || hasMil); }).forEach(function (d) {
         lines.push(d[1] + ': ' + fmtTotal(c[d[0]].sum) + ' (인정 ' + (d[0] === 'violence' ? violenceRecog(c[d[0]].sum) + ', 한시적 연 단위' : fmtRecog(c[d[0]].rec)) + ')');
       });
     }
@@ -632,10 +640,11 @@
       stat('중복 포함 합산', a.okCount ? fmtTotal(a.total) : '—', a.okCount + '건 그대로 합산'));
     box.appendChild(stats);
     if (doc) {
-      var c = PC.compute(doc.recs, effRef(), CC);
-      var items = [['총경력', c.total, 0, 't', 'total'], ['부장', c.buzang, 0, 'b', 'buzang'], ['연구학교', c.research, 0, 'r', ''], ['학교폭력 예방기여', c.violence, 1, 'v', ''], ['파견', c.dispatch, 0, 'd', 'dispatch'], ['휴직', c.leave, 0, 'l', 'leave']];
+      var c = docCompute(p, a, doc.recs);
+      var items = [['총경력', c.total, 0, 't', ''], ['실재직', c.actual, 0, 'a', ''], ['부장', c.buzang, 0, 'b', 'buzang'], ['연구학교', c.research, 0, 'r', ''], ['학교폭력 예방기여', c.violence, 1, 'v', '']];
+      if (doc.recs.some(function (r) { return r.k === 'M'; })) items.push(['군 경력', c.mil, 0, 'm', 'mil']);
+      items.push(['파견', c.dispatch, 0, 'd', 'dispatch'], ['휴직', c.leave, 0, 'l', 'leave']);
       if (c.pro.segs.length) items.push(['전문직', c.pro, 0, 'j', 'pro']);
-      if (doc.recs.some(function (r) { return r.k === 'M'; })) items.splice(4, 0, ['군 경력', c.mil, 0, 'm', 'mil']);
       var ped = editedFromRows(p, a, doc.recs);
       var ss = sec('인사기록 PDF 요약' + (ped ? ' · 입력창 수정 내용 함께 표시' : '')); ss.classList.add('sumsec'); box.appendChild(ss);
       var tb = h('table', { class: 'ps-sum' }, h('thead', null, h('tr', null, h('th', { text: '인사기록 PDF' }), items.map(function (it) { return h('th', { class: it[3], text: it[0] }); }))),
@@ -812,6 +821,33 @@
     var b = $('#btnDocFold'); b.textContent = c ? '펼치기' : '접기'; b.setAttribute('aria-expanded', c ? 'false' : 'true');
   }
   /** 입력창을 PDF 기록에서 만든 기본 상태와 비교해, 수정됐으면 항목별 입력창 기준 값을 계산 */
+  /** 입력창 줄을 ‘총경력에 들어갈 기간’(체크된 줄)과 ‘빼야 할 기간’(휴직·군 줄, 체크 여부와 무관)으로 나눔 */
+  function splitFromRows(p, a) {
+    var ref = CC.isoToSer(effRef()), all = [], excl = [], hasEx = false;
+    p.rows.forEach(function (r, i) {
+      var x = a.rows[i], c = catOf(r.memo);
+      if (x.kind === 'ok') all.push({ s: x.s, e: x.e });
+      if (c === 'l' || c === 'm') {
+        var s = x.kind === 'ok' ? x.s : CC.isoToSer(r.start), e = x.kind === 'ok' ? x.e : (r.end ? CC.isoToSer(r.end) : ref);
+        if (s != null && e != null && e >= s) { excl.push({ s: s, e: e }); hasEx = true; }
+      }
+    });
+    return { all: all, excl: excl, hasEx: hasEx };
+  }
+  function packSegs(segs) {
+    var durs = segs.map(function (g) { return CC.diff(g.s, g.e); }), sum = CC.sum(durs);
+    return { segs: segs, durs: durs, sum: sum, rec: CC.recognize(sum) };
+  }
+  /** 총경력 = 체크한 줄 모두(중복은 한 번), 실재직 = 총경력에서 휴직·군 경력 기간을 뺀 실제 근무 기간 */
+  function actualFrom(p, a) {
+    var sp = splitFromRows(p, a), tot = CC.union(sp.all, false);
+    return { total: packSegs(tot), actual: packSegs(CC.subtract(tot, CC.union(sp.excl, true))), hasEx: sp.hasEx };
+  }
+  function docCompute(p, a, recs) {
+    var c = PC.compute(recs, effRef(), CC), z = actualFrom(p, a);
+    c.total = z.total; c.actual = z.actual;
+    return c;
+  }
   function editedFromRows(p, a, recs) {
     var base = buildRowsFromRecs(recs, groupRows);
     var rowsNow = p.rows.filter(function (r) { return r.memo || r.start || r.end; });
@@ -829,7 +865,7 @@
       var u = CC.union(segs, touch), sum = CC.sum(u.map(function (g) { return CC.diff(g.s, g.e); }));
       return { sum: sum, rec: CC.recognize(sum) };
     }
-    return { total: pack(all, false), buzang: pack(cat.b, true), dispatch: pack(cat.d, true), pro: pack(cat.j, true), leave: pack(cat.l, true), mil: pack(cat.m, true) };
+    return { buzang: pack(cat.b, true), dispatch: pack(cat.d, true), pro: pack(cat.j, true), leave: pack(cat.l, true), mil: pack(cat.m, true) };
   }
   function renderDoc(p, a) {
     applyFold(p);
@@ -840,7 +876,7 @@
     $('#btnPdf').textContent = 'PDF 불러오기 (새 사람 추가)';
     if (!recs) return;
 
-    var c = PC.compute(recs, effRef(), CC);
+    var c = docCompute(p, a || analyze(p), recs);
     var grid = $('#sumGrid'); grid.textContent = '';
     var who = [p.doc.name, p.doc.org, p.doc.pos].filter(Boolean);
     var wb = $('#docWho'); wb.textContent = '';
@@ -853,7 +889,8 @@
     var mil = recs.filter(function (r) { return r.k === 'M'; });
     var ed = a ? editedFromRows(p, a, recs) : null;
     var tbody = h('tbody');
-    [['total', '총경력', 't', '재직 기간에서 휴직 등을 뺀 기간 (군 경력 제외)'],
+    [['total', '총경력', 't', '입력창에서 체크한 줄을 모두 포함 (중복은 한 번만)'],
+     ['actual', '실재직 경력', 'a', '총경력에서 휴직·군 경력을 뺀 실제 근무 기간'],
      ['buzang', '부장 경력', 'b', '부장교사·부장담임 보직 기간'],
      ['research', '연구학교 경력', 'r', '12.가산점 ‘연구·시범학교’ 기간'],
      ['violence', '학교폭력 예방기여 경력', 'v', '학교폭력예방및기여 가산점 기간'],
