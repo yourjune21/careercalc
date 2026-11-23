@@ -43,6 +43,7 @@
   function packRec(r) {
     return r.k + r.s.replace(/-/g, '') + (r.e ? r.e.replace(/-/g, '') : '00000000') + (r.x ? '!' : '');
   }
+  // 로컬 저장소·백업용: 부서(d)는 쿠키 한도 때문에 쿠키에는 넣지 않는다
   function unpackRec(t) {
     var m = /^([SHBDJLVRM])(\d{8})(\d{8})(!?)$/.exec(t);
     if (!m) return null;
@@ -60,7 +61,7 @@
       if (CC.isoToSer(r.s) == null) return;
       var e = r.e || '';
       if (e && CC.isoToSer(e) == null) return;
-      recs.push({ k: r.k, s: r.s, e: e, x: r.x ? 1 : 0 });
+      var rc = { k: r.k, s: r.s, e: e, x: r.x ? 1 : 0 }; if (r.d) rc.d = String(r.d).replace(/[\u0000-\u001f]/g, '').slice(0, 30); recs.push(rc);
     });
     if (!recs.length) return null;
     var out = { recs: recs };
@@ -73,7 +74,7 @@
     while (rows.length && !rows[rows.length - 1].memo && !rows[rows.length - 1].start && !rows[rows.length - 1].end) rows.pop();
     var out = [enc(p.name)];
     rows.forEach(function (r) {
-      out.push(enc(r.memo || '') + '*' + (r.start || '').replace(/-/g, '') + '*' + (r.end || '').replace(/-/g, ''));
+      out.push(enc(r.memo || '') + '*' + (r.start || '').replace(/-/g, '') + '*' + (r.end || '').replace(/-/g, '') + (r.off ? '*1' : ''));
     });
     if (p.doc && p.doc.recs && p.doc.recs.length) {
       out.push('@' + enc(p.doc.name || '') + '*' + enc(p.doc.org || '') + '*' + enc(p.doc.pos || ''));
@@ -97,7 +98,7 @@
       }
       if (rows.length >= MAX_ROWS) continue;
       var f = parts[k].split('*');
-      rows.push({ memo: dec(f[0] || '').slice(0, MEMO_MAX), start: isoFrom8(f[1]), end: isoFrom8(f[2]) });
+      var rw = { memo: dec(f[0] || '').slice(0, MEMO_MAX), start: isoFrom8(f[1]), end: isoFrom8(f[2]) }; if (f[3] === '1') rw.off = 1; rows.push(rw);
     }
     var p = { id: id, name: dec(parts[0] || '').slice(0, NAME_MAX) || '(이름 없음)', rows: rows };
     if (doc) { if (who) { doc.name = who.name.slice(0, 40); doc.org = who.org.slice(0, 40); doc.pos = who.pos.slice(0, 40); } p.doc = doc; }
@@ -217,7 +218,9 @@
               return {
                 memo: String((r && r.memo) || '').slice(0, MEMO_MAX),
                 start: CC.isoToSer(r && r.start) == null ? '' : r.start,
-                end: CC.isoToSer(r && r.end) == null ? '' : r.end
+                end: CC.isoToSer(r && r.end) == null ? '' : r.end,
+                dept: String((r && r.dept) || '').slice(0, 30),
+                off: r && r.off ? 1 : 0
               };
             })
           };
@@ -233,8 +236,8 @@
           selected: state.selected || 0,
           ref: state.ref || '',
           people: state.people.map(function (p) {
-            var o = { id: p.id, name: p.name, rows: p.rows.map(function (r) { return { memo: r.memo || '', start: r.start || '', end: r.end || '' }; }) };
-            if (p.doc && p.doc.recs && p.doc.recs.length) o.doc = { name: p.doc.name || '', org: p.doc.org || '', pos: p.doc.pos || '', recs: p.doc.recs.map(function (r) { return { k: r.k, s: r.s, e: r.e || '', x: r.x ? 1 : 0 }; }) };
+            var o = { id: p.id, name: p.name, rows: p.rows.map(function (r) { return { memo: r.memo || '', start: r.start || '', end: r.end || '', dept: r.dept || '', off: r.off ? 1 : 0 }; }) };
+            if (p.doc && p.doc.recs && p.doc.recs.length) o.doc = { name: p.doc.name || '', org: p.doc.org || '', pos: p.doc.pos || '', recs: p.doc.recs.map(function (r) { return { k: r.k, s: r.s, e: r.e || '', x: r.x ? 1 : 0, d: r.d || '' }; }) };
             return o;
           })
         };

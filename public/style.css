@@ -378,3 +378,12 @@ h2 .badge { font-size: 12px; margin-left: 6px; }
 .rows tr[data-cat="s"] .c-memo input, .rows tr[data-cat="b"] .c-memo input, .rows tr[data-cat="d"] .c-memo input, .rows tr[data-cat="j"] .c-memo input { border-left: 4px solid var(--cc); font-weight: 600; color: var(--cc); }
 .kind.H { background: #ececec; color: #666; }
 @media (max-width: 700px) { .rows tr[data-cat="s"], .rows tr[data-cat="b"], .rows tr[data-cat="d"], .rows tr[data-cat="j"] { border-left: 6px solid var(--cc); } .rows tr[data-cat] td.c-no { box-shadow: none !important; } }
+
+/* 행별 포함 체크 · 부서 표시 */
+.rows .c-use { width: 44px; text-align: center; padding-top: 11px; }
+.rows th.c-use { text-align: center; }
+.rows .c-use input { width: 18px; height: 18px; accent-color: var(--accent, #0f5c5c); cursor: pointer; }
+.rows .c-memo .dept { font-size: 11px; line-height: 1.3; color: var(--muted); margin: 2px 2px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.rows tr.row-off td:not(.c-use):not(.c-del) { opacity: .45; }
+.rows tr.row-off .c-memo input, .rows tr.row-off .c-date input { text-decoration: line-through; }
+@media (max-width: 700px) { .rows .c-use { grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; padding: 0; width: auto; } .rows .c-use::after { content: '경력에 포함'; font-size: 12px; color: var(--muted); } }

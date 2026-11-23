@@ -50,6 +50,7 @@
     var info = p.rows.map(function (r) {
       var s = CC.isoToSer(r.start), e = CC.isoToSer(r.end), usedRef = false;
       if (!(r.start || r.end || r.sRaw || r.eRaw)) return { kind: 'empty' };
+      if (r.off) return { kind: 'off' };
       if (r.sBad || r.eBad) {
         return { kind: 'bad', msg: [r.sBad && '시작일', r.eBad && '종료일'].filter(Boolean).join('·') + ' 형식을 확인하세요' };
       }
@@ -268,8 +269,10 @@
           h('input', { type: 'date', class: 'picker', 'data-which': which, tabindex: '-1', 'aria-hidden': 'true', min: '1900-01-01', max: '2200-12-31' })),
         h('div', { class: 'hint', 'data-hint': which }));
     }
+    tr.appendChild(h('td', { class: 'c-use' }, h('input', { type: 'checkbox', class: 'f-use', checked: r.off ? null : true, 'aria-label': (i + 1) + '번 경력에 포함', title: '체크 해제하면 이 줄은 경력 계산에서 빠집니다' })));
     tr.appendChild(h('td', { class: 'c-no', text: String(i + 1) }));
-    tr.appendChild(h('td', { class: 'c-memo' }, h('input', { type: 'text', class: 'f-memo', maxlength: ST.MEMO_MAX, placeholder: '예: ○○초', 'aria-label': (i + 1) + '번 내용', value: r.memo || '' })));
+    tr.appendChild(h('td', { class: 'c-memo' }, h('input', { type: 'text', class: 'f-memo', maxlength: ST.MEMO_MAX, placeholder: '예: ○○초', 'aria-label': (i + 1) + '번 내용', value: r.memo || '' }),
+      r.dept ? h('div', { class: 'dept', title: '부서: ' + r.dept, text: r.dept }) : null));
     tr.appendChild(dateCell(startIn, 's'));
     tr.appendChild(dateCell(endIn, 'e'));
     ['y', 'm', 'd'].forEach(function (k) { tr.appendChild(h('td', { class: 'c-n res-' + k, text: '' })); });
@@ -291,7 +294,7 @@
     var hasDoc = !!(p.doc && p.doc.recs && p.doc.recs.length);
     $('#catBar').hidden = !hasDoc; $('#groupChk').checked = groupRows;
     setTitleBadge(p);
-    $('#rowsSummary').textContent = '경력 입력창 · ' + p.rows.filter(function (r) { return r.start || r.end; }).length + '건 입력됨' + ($('#rowsFold').open ? '' : ' (펼쳐서 보기·수정)');
+    $('#rowsSummary').textContent = '경력 입력창 · ' + p.rows.filter(function (r) { return r.start || r.end; }).length + '건 입력됨' + (p.rows.some(function (r) { return r.off && (r.start || r.end); }) ? ' (제외 ' + p.rows.filter(function (r) { return r.off && (r.start || r.end); }).length + '건)' : '') + ($('#rowsFold').open ? '' : ' (펼쳐서 보기·수정)');
     var a = analyze(p);
     var trs = $('#rowsBody').children;
 
@@ -305,6 +308,7 @@
       var st = tr.querySelector('.c-st');
       st.textContent = '';
       tr.setAttribute('data-cat', catOf(r.memo));
+      tr.classList.toggle('row-off', !!r.off);
       tr.classList.toggle('row-warn', !!(x.ov && x.ov.length));
       tr.classList.toggle('row-bad', x.kind === 'bad' || x.kind === 'reversed');
       if (x.ov && x.ov.length) {
@@ -312,6 +316,8 @@
         st.appendChild(h('span', { class: 'chip warn', title: ovTxt, text: x.ov.length <= 2 ? '⚠ ' + ovTxt : '⚠ ' + x.ov.length + '건 중복' }));
       } else if (x.kind === 'bad' || x.kind === 'reversed') {
         st.appendChild(h('span', { class: 'chip bad', text: x.msg }));
+      } else if (x.kind === 'off') {
+        st.appendChild(h('span', { class: 'chip soft', text: '제외됨' }));
       } else if (x.kind === 'partial') {
         st.appendChild(h('span', { class: 'chip soft', text: x.msg }));
       } else if (ok) {
@@ -492,6 +498,14 @@
     }
   });
 
+  body.addEventListener('change', function (e) {
+    var t = e.target, tr = t.closest('tr'), p = current();
+    if (!tr || !p || !t.classList.contains('f-use')) return;
+    var r = p.rows[+tr.dataset.i];
+    r.off = t.checked ? 0 : 1;
+    updateResults(); scheduleSave();
+  });
+
   // Enter: 같은 열의 다음 줄로 (마지막 줄이면 행 추가)
   body.addEventListener('keydown', function (e) {
     if (e.key !== 'Enter' || e.isComposing) return;
@@ -642,8 +656,8 @@
     var data = {
       app: 'career-calc', version: 1, exportedAt: new Date().toISOString(), ref: store.ref || '',
       people: store.people.map(function (p) {
-        var o = { name: p.name, rows: p.rows.filter(function (r) { return r.memo || r.start || r.end; }).map(function (r) { return { memo: r.memo || '', start: r.start || '', end: r.end || '' }; }) };
-        if (p.doc && p.doc.recs && p.doc.recs.length) o.doc = { name: p.doc.name || '', org: p.doc.org || '', pos: p.doc.pos || '', recs: p.doc.recs.map(function (r) { return { k: r.k, s: r.s, e: r.e || '', x: r.x ? 1 : 0 }; }) };
+        var o = { name: p.name, rows: p.rows.filter(function (r) { return r.memo || r.start || r.end; }).map(function (r) { return { memo: r.memo || '', start: r.start || '', end: r.end || '', dept: r.dept || '', off: r.off ? 1 : 0 }; }) };
+        if (p.doc && p.doc.recs && p.doc.recs.length) o.doc = { name: p.doc.name || '', org: p.doc.org || '', pos: p.doc.pos || '', recs: p.doc.recs.map(function (r) { return { k: r.k, s: r.s, e: r.e || '', x: r.x ? 1 : 0, d: r.d || '' }; }) };
         return o;
       })
     };
@@ -670,7 +684,8 @@
           var rows = (Array.isArray(p.rows) ? p.rows : []).slice(0, MAX_ROWS).map(function (r) {
             return {
               memo: String((r && r.memo) || '').slice(0, ST.MEMO_MAX),
-              start: CC.parseDate(r && r.start) || '', end: CC.parseDate(r && r.end) || ''
+              start: CC.parseDate(r && r.start) || '', end: CC.parseDate(r && r.end) || '',
+              dept: String((r && r.dept) || '').slice(0, 30), off: r && r.off ? 1 : 0
             };
           });
           var np = { id: ST.nextId(store.people), name: p.name.trim().slice(0, ST.NAME_MAX) || '(이름 없음)', rows: rows };
@@ -831,8 +846,16 @@
     function openAtRef(list) { return list.some(function (g) { return g.open && g.e === ref; }); }
     var leaves = CC.union(plain(segsOf(['L'])));
     var rows = [];
-    function push(memo, g, open, ord) {
-      rows.push({ memo: memo.slice(0, ST.MEMO_MAX), start: CC.serToIso(g.s), end: (open && g.e === ref) ? '' : CC.serToIso(g.e), _s: g.s, _o: ord });
+    function deptFor(kinds, g) {
+      var seen = [];
+      use.filter(function (r) { return kinds.indexOf(r.k) >= 0 && r.d; })
+        .filter(function (r) { var q = toSeg(r); return q && q.s <= g.e && q.e >= g.s; })
+        .sort(function (a, b) { return a.s < b.s ? 1 : a.s > b.s ? -1 : 0; })
+        .forEach(function (r) { if (seen.indexOf(r.d) < 0) seen.push(r.d); });
+      return !seen.length ? '' : seen.length === 1 ? seen[0] : seen[0] + ' 외 ' + (seen.length - 1) + '곳';
+    }
+    function push(memo, g, open, ord, kinds) {
+      rows.push({ memo: memo.slice(0, ST.MEMO_MAX), dept: deptFor(kinds, g), start: CC.serToIso(g.s), end: (open && g.e === ref) ? '' : CC.serToIso(g.e), _s: g.s, _o: ord });
     }
     var ORDER = ['S', 'B', 'D', 'J'];
     if (grouped) {
@@ -844,22 +867,22 @@
         parts[k] = { segs: CC.subtract(CC.union(plain(l), true), leaves), open: openAtRef(l) };
       });
       // 재직은 부장·파견·전문직 기간까지 이어서 한 줄로 둔다(잘라 나누면 월·일 환산이 달라져 PDF 카드와 합계가 어긋남)
-      base.forEach(function (g) { push(CAT_MEMO.S, g, openAtRef(all), 0); });
-      ['B', 'D', 'J'].forEach(function (k, i) { parts[k].segs.forEach(function (g) { push(CAT_MEMO[k], g, parts[k].open, i + 1); }); });
+      base.forEach(function (g) { push(CAT_MEMO.S, g, openAtRef(all), 0, ['S', 'H']); });
+      ['B', 'D', 'J'].forEach(function (k, i) { parts[k].segs.forEach(function (g) { push(CAT_MEMO[k], g, parts[k].open, i + 1, [k]); }); });
       rows.sort(function (a, b) { return a._o - b._o || a._s - b._s; });
     } else {
       use.forEach(function (r) {
         if (['S', 'H', 'B', 'D', 'J'].indexOf(r.k) < 0) return;
         var g = toSeg(r); if (!g) return;
         var k = r.k === 'H' ? 'S' : r.k;
-        CC.subtract([{ s: g.s, e: g.e }], leaves).forEach(function (x) { push(CAT_MEMO[k], x, g.open, ORDER.indexOf(k)); });
+        CC.subtract([{ s: g.s, e: g.e }], leaves).forEach(function (x) { push(CAT_MEMO[k], x, g.open, ORDER.indexOf(k), r.k === 'H' ? ['H'] : [r.k]); });
       });
       rows.sort(function (a, b) { return a._s - b._s || a._o - b._o; });
     }
-    return rows.slice(0, MAX_ROWS).map(function (x) { return { memo: x.memo, start: x.start, end: x.end }; });
+    return rows.slice(0, MAX_ROWS).map(function (x) { return { memo: x.memo, dept: x.dept, start: x.start, end: x.end }; });
   }
   function sameRows(a, b) {
-    var f = function (list) { return list.filter(function (r) { return r.memo || r.start || r.end; }).map(function (r) { return r.memo + '|' + r.start + '|' + r.end; }).join(';'); };
+    var f = function (list) { return list.filter(function (r) { return r.memo || r.start || r.end; }).map(function (r) { return r.memo + '|' + r.start + '|' + r.end + (r.off ? '|off' : ''); }).join(';'); };
     return f(a) === f(b);
   }
   /** PDF의 재직 기록을 아래 입력창에 채움 */

@@ -130,7 +130,19 @@
 
     var c = buildRows(secItems.career);
     if (!c.rows.length) warnings.push('‘16. 경력’ 표에서 기간을 찾지 못했습니다.');
+    // '부서' 칸 위치: 머리글의 '부'(서)와 '발'(령청) 글자 사이
+    var bx = 344, fx = 471;
+    secItems.career.forEach(function (it) {
+      var t = it.str.trim();
+      if (t === '부' && it.x > 250 && it.x < 460) bx = it.x;
+      if (t === '발' && it.x > 400) fx = it.x;
+    });
     c.rows.forEach(function (r) {
+      var dept = r.texts.filter(function (i) { return i.x >= bx - 45 && i.x < (bx + fx) / 2 + 20; })
+        .sort(function (a, b) { return b.y - a.y || a.x - b.x; })
+        .map(function (i) { return i.str.trim(); }).join('').replace(/\s+/g, ' ');
+      var sp = dept.indexOf(' ');
+      if (sp > 0 && sp < dept.length - 1) dept = dept.slice(sp + 1);     // '○○지원청 ○○초등학교' → '○○초등학교'
       var txt = r.texts.slice().sort(function (a, b) { return b.y - a.y || a.x - b.x; })
         .map(function (i) { return i.str; }).join(' ');
       var t = norm(txt);
@@ -138,7 +150,7 @@
         : (DISPATCH.test(t) && !BACK.test(t)) ? 'D'
         : PRO.test(t) ? 'J'
         : (/부장/.test(t) ? 'B' : 'S');
-      records.push({ k: k, s: r.s, e: r.e, x: 0, lab: txt.replace(/\s+/g, ' ').slice(0, 60), hire: HIRE.test(t) });
+      records.push({ k: k, s: r.s, e: r.e, x: 0, lab: txt.replace(/\s+/g, ' ').slice(0, 60), hire: HIRE.test(t), d: dept.slice(0, 30) });
     });
 
     markFirstHire(records);

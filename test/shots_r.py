@@ -6,5 +6,5 @@ with sync_playwright() as pw:
     pg=b.new_context(viewport={'width':1280,'height':900}).new_page(); pg.goto('http://localhost:8787/')
     with pg.expect_file_chooser() as fc: pg.click('#btnPdfEmpty')
     fc.value.set_files(s); pg.wait_for_selector('#sumGrid .sum-card', timeout=20000)
-    pg.click('#rowsSummary'); pg.wait_for_timeout(300)
+    pg.wait_for_timeout(300)
     el=pg.locator('#rowsFold'); el.screenshot(path='/home/claude/shots/rows_grouped.png')
