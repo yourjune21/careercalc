@@ -11,6 +11,11 @@ with sync_playwright() as pw:
     if 'ungroup' in sys.argv: pg.uncheck('#groupChk'); pg.wait_for_timeout(300)
     if 'edit' in sys.argv:
         r=pg.locator('#rowsBody tr').nth(1); r.locator('.f-start').fill('2025-3-1'); r.locator('.f-start').blur(); pg.wait_for_timeout(300)
+    if 'award' in sys.argv:
+        pg.click('#awardToggle')
+        pg.fill('#awardBase1','2024-5-1'); pg.fill('#awardFrom1','2024-1-1'); pg.fill('#awardTo1','2024-12-31')
+        pg.click('#awardAdd'); pg.fill('#awardBase2','2026-11-23'); pg.fill('#awardFrom2','2019-3-1'); pg.fill('#awardTo2','2020-2-29')
+        pg.click('#awardAdd'); pg.fill('#awardBase3','2026-11-23'); pg.fill('#awardFrom3','2025-3-1'); pg.wait_for_timeout(300)
     pg.evaluate("window.print=()=>{}"); pg.click('#btnPrint'); pg.wait_for_timeout(300)
     pg.emulate_media(media='print')
     pg.pdf(path='/tmp/sheet.pdf', format='A4', margin={'top':'12mm','bottom':'12mm','left':'12mm','right':'12mm'}, prefer_css_page_size=True, print_background=True)

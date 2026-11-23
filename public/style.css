@@ -626,3 +626,14 @@ h2 .badge { font-size: 12px; margin-left: 6px; }
 .multi-item:hover{background:#f3f8f7}
 .multi-item .muted{margin-left:auto}
 #printMulti{display:none}
+
+@media print {
+  .ps-aw { width: 100%; border-collapse: collapse; font-size: 10.5px; }
+  .ps-aw th { text-align: left; font-weight: 700; color: #4a5a5a; background: #f1f6f5 !important; padding: 4px 6px; border-bottom: 1px solid #cfdcda; }
+  .ps-aw td { padding: 4px 6px; border-bottom: 1px solid #e3ebe9; vertical-align: top; }
+  .ps-aw td.n { font-weight: 700; white-space: nowrap; } .ps-aw td.why { color: #7a2a2a; font-size: 10px; }
+  .ps-aw td.st { font-weight: 800; white-space: nowrap; } .ps-aw td.st.ok { color: #1f7a45; } .ps-aw td.st.no { color: #b3261e; } .ps-aw td.st.unk { color: #7a8886; }
+  .print-sheet.cmp .ps-aw { font-size: 9.5px; } .print-sheet.cmp .ps-aw td, .print-sheet.cmp .ps-aw th { padding: 2px 5px; }
+  .tiny .ps-aw { display: none; }
+}
+@media print { .ps-aw td:nth-child(2), .ps-aw td:nth-child(3) { white-space: nowrap; } }

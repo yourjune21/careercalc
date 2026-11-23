@@ -758,6 +758,25 @@
       box.appendChild(tb);
     }
 
+    var awr = awardResults(p).filter(function (x) { return x.res.status !== 'bad'; });
+    if (awr.length) {
+      box.appendChild(sec('표창 검정'));
+      var stMap = { ok: ['표창가능', 'ok'], no: ['표창불가', 'no'], unknown: ['확인불가', 'unk'] };
+      box.appendChild(h('table', { class: 'ps-aw' },
+        h('thead', null, h('tr', null, ['검정', '표창 기준일', '유공기간', '불가로 보는 경력', '결과', '사유'].map(function (t) { return h('th', { text: t }); }))),
+        h('tbody', null, awr.map(function (x) {
+          var sl = award.slots[x.i], ap = awardPeriod(sl), m = stMap[x.res.status];
+          var ex = AW_EX.filter(function (e) { return sl.ex[e[0]]; }).map(function (e) { return e[1].replace(/\(.*\)/, ''); }).concat(['정직·직위해제']).join('·');
+          return h('tr', null,
+            h('td', { class: 'n', text: '표창검정' + (x.i + 1) }),
+            h('td', { text: CC.fmtIso(sl.base) }),
+            h('td', { text: CC.fmtSer(ap.from) + ' ~ ' + CC.fmtSer(ap.to) }),
+            h('td', { text: ex }),
+            h('td', { class: 'st ' + m[1], text: m[0] }),
+            h('td', { class: 'why', text: x.res.status === 'no' ? awardText(x.res) : (x.res.status === 'unknown' ? '인사기록 PDF 없음' : '') }));
+        }))));
+    }
+
     var list = [];
     p.rows.forEach(function (r, i) { if (r.memo || r.start || r.end || r.sRaw || r.eRaw) list.push(i); });
     var dense = ' ' + (list.length <= 8 ? 'sp' : list.length <= 11 ? 'md' : list.length <= 15 ? 'lg' : list.length <= 24 ? 'dense' : 'xd');
