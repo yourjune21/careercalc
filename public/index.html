@@ -33,14 +33,14 @@
       <p class="muted small ref-note">종료일을 비워 둔 경력은 <b>이 날짜까지</b> 계산합니다. (비워 두면 오늘 날짜)</p>
     </section>
     <details class="card award" id="awardBox">
-      <summary><b>표창 검정</b> <span class="muted small">— 유공일~표창 기준일 사이에 휴직·파견 등이 있는지 확인 (쓰지 않을 때는 접어 두세요)</span></summary>
+      <summary><b>표창 검정</b> <span class="muted small">— 유공기간·표창 기준일에 휴직·파견 등이 있는지 확인 (쓰지 않을 때는 접어 두세요)</span></summary>
       <div class="award-body">
         <div class="award-inputs">
-          <label>유공일 <input id="awardMerit" type="text" class="f-award" inputmode="numeric" autocomplete="off" placeholder="예: 2023-3-1"></label>
           <label>표창 기준일 <input id="awardBase" type="text" class="f-award" inputmode="numeric" autocomplete="off" placeholder="예: 2026-8-31"></label>
+          <label>유공기간 <input id="awardFrom" type="text" class="f-award" inputmode="numeric" autocomplete="off" placeholder="시작일 예: 2023-3-1" aria-label="유공기간 시작일"> ~ <input id="awardTo" type="text" class="f-award" inputmode="numeric" autocomplete="off" placeholder="종료일 예: 2026-2-28" aria-label="유공기간 종료일"></label>
           <button type="button" class="btn ghost" id="awardClear">지우기</button>
         </div>
-        <p class="muted small">유공일부터 표창 기준일까지의 기간에 <b>휴직·정직·직위해제·파견</b>이 걸치면 ‘표창불가’로 표시합니다. 이 판정은 <b>인사기록 PDF를 불러온 사람</b>만 가능하고, PDF가 없는 사람은 ‘확인 불가’입니다. 결과는 이름 옆과 사람별 보관함에도 작게 표시됩니다.</p>
+        <p class="muted small"><b>유공기간(시작일~종료일)</b> 동안과 <b>표창 기준일 당일</b>에 <b>휴직·정직·직위해제·파견</b>이 걸치면 ‘표창불가’로 표시합니다. 유공기간 종료일을 비우면 표창 기준일까지로 봅니다. 이 판정은 <b>인사기록 PDF를 불러온 사람</b>만 가능하고, PDF가 없는 사람은 ‘확인 불가’입니다. 결과는 이름 옆과 사람별 보관함에도 작게 표시됩니다.</p>
         <p class="award-sum" id="awardSum" role="status"></p>
         <ul class="award-list" id="awardList"></ul>
       </div>

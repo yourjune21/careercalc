@@ -114,16 +114,22 @@
   /* ---------- 사람 목록 ---------- */
   /* ---------- 표창 검정 ---------- */
   var AWARD_KEY = 'careerCalc.award';
-  var award = { merit: '', base: '' };
-  try { var _a = JSON.parse(root_ls().getItem(AWARD_KEY) || '{}'); if (CC.isoToSer(_a.merit) != null) award.merit = _a.merit; if (CC.isoToSer(_a.base) != null) award.base = _a.base; } catch (e) { /* noop */ }
+  var award = { base: '', from: '', to: '' };
+  try { var _a = JSON.parse(root_ls().getItem(AWARD_KEY) || '{}'); if (_a.merit && !_a.from) _a.from = _a.merit; ['base', 'from', 'to'].forEach(function (k) { if (CC.isoToSer(_a[k]) != null) award[k] = _a[k]; }); } catch (e) { /* noop */ }
   function root_ls() { return window.localStorage; }
   function saveAward() { try { root_ls().setItem(AWARD_KEY, JSON.stringify(award)); } catch (e) { /* noop */ } }
 
-  /** 사람 1명의 표창 가능 여부: null(기간 미입력) | {status:'ok'|'no'|'unknown', reasons:[…]} */
+  /** 검정 조건이 갖춰졌는지: 표창 기준일 + 유공기간 시작일 필요(종료일은 비우면 기준일) */
+  function awardPeriod() {
+    var bs = CC.isoToSer(award.base), fs = CC.isoToSer(award.from), ts = award.to ? CC.isoToSer(award.to) : bs;
+    if (bs == null || fs == null || ts == null) return null;
+    return { base: bs, from: fs, to: ts, bad: ts < fs };
+  }
+  /** 사람 1명의 표창 가능 여부: null(미입력) | {status:'ok'|'no'|'unknown'|'bad', reasons:[…]} */
   function awardCheck(p) {
-    var ms = CC.isoToSer(award.merit), bs = CC.isoToSer(award.base);
-    if (ms == null || bs == null) return null;
-    if (bs < ms) return { status: 'bad', reasons: [] };
+    var ap = awardPeriod();
+    if (!ap) return null;
+    if (ap.bad) return { status: 'bad', reasons: [] };
     var recs = p.doc && p.doc.recs ? p.doc.recs : null;
     if (!recs || !recs.length) return { status: 'unknown', reasons: [] };
     var ref = CC.isoToSer(effRef()), reasons = [];
@@ -131,8 +137,10 @@
       if (r.x || (r.k !== 'L' && r.k !== 'D')) return;
       var s = CC.isoToSer(r.s), e = r.e ? CC.isoToSer(r.e) : ref;
       if (s == null || e == null) return;
-      var os = Math.max(s, ms), oe = Math.min(e, bs);
-      if (os <= oe) reasons.push({ label: r.k === 'L' ? '휴직 등' : '파견', s: os, e: oe });
+      var lab = r.k === 'L' ? '휴직 등' : '파견';
+      var os = Math.max(s, ap.from), oe = Math.min(e, ap.to);
+      if (os <= oe) reasons.push({ label: '유공기간 중 ' + lab, s: os, e: oe });
+      if (s <= ap.base && ap.base <= e) reasons.push({ label: '기준일 당시 ' + lab, s: ap.base, e: ap.base });
     });
     reasons.sort(function (a, b) { return a.s - b.s; });
     return { status: reasons.length ? 'no' : 'ok', reasons: reasons };
@@ -156,9 +164,9 @@
   function renderAward() {
     var sum = $('#awardSum'), ul = $('#awardList');
     ul.textContent = '';
-    var ms = CC.isoToSer(award.merit), bs = CC.isoToSer(award.base);
-    if (ms == null || bs == null) { sum.textContent = '유공일과 표창 기준일을 모두 입력하면 판정합니다.'; return; }
-    if (bs < ms) { sum.textContent = '표창 기준일이 유공일보다 빠릅니다. 날짜를 확인하세요.'; return; }
+    var ap = awardPeriod();
+    if (!ap) { sum.textContent = '표창 기준일과 유공기간 시작일을 입력하면 판정합니다.'; return; }
+    if (ap.bad) { sum.textContent = '유공기간 종료일이 시작일보다 빠릅니다. 날짜를 확인하세요.'; return; }
     var cnt = { ok: 0, no: 0, unknown: 0 };
     store.people.forEach(function (p) {
       var res = awardCheck(p); cnt[res.status]++;
@@ -168,10 +176,10 @@
         h('span', { class: 'badge ' + ({ ok: 'ok', no: 'no', unknown: 'unk' }[res.status]), text: label }),
         h('span', { class: 'muted small', text: res.status === 'no' ? awardText(res) : '' }))));
     });
-    sum.textContent = CC.fmtIso(award.merit) + ' ~ ' + CC.fmtIso(award.base) + ' · 표창가능 ' + cnt.ok + '명 · 표창불가 ' + cnt.no + '명 · 확인불가 ' + cnt.unknown + '명';
+    sum.textContent = '기준일 ' + CC.fmtIso(award.base) + ' · 유공기간 ' + CC.fmtSer(ap.from) + '~' + CC.fmtSer(ap.to) + ' · 표창가능 ' + cnt.ok + '명 · 표창불가 ' + cnt.no + '명 · 확인불가 ' + cnt.unknown + '명';
   }
   function awardRefresh() { renderPeople(); var p = current(); if (p) setTitleBadge(p); }
-  [['#awardMerit', 'merit'], ['#awardBase', 'base']].forEach(function (d) {
+  [['#awardBase', 'base'], ['#awardFrom', 'from'], ['#awardTo', 'to']].forEach(function (d) {
     var el = $(d[0]);
     if (award[d[1]]) el.value = CC.fmtIso(award[d[1]]);
     el.addEventListener('input', function () {
@@ -186,7 +194,7 @@
     });
   });
   $('#awardClear').addEventListener('click', function () {
-    award.merit = ''; award.base = ''; $('#awardMerit').value = ''; $('#awardBase').value = ''; saveAward(); awardRefresh();
+    award.base = ''; award.from = ''; award.to = ''; $('#awardBase').value = ''; $('#awardFrom').value = ''; $('#awardTo').value = ''; saveAward(); awardRefresh();
   });
   $('#awardList').addEventListener('click', function (e) {
     var b = e.target.closest('.award-item'); if (b) selectPerson(+b.dataset.id);
