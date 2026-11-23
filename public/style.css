@@ -298,12 +298,8 @@ table.rows { width: 100%; border-collapse: collapse; min-width: 800px; }
 /* 버전 */
 .verbox { margin: 14px 4px 0; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
 .ver { font-weight: 600; }
-.changelog summary { cursor: pointer; display: inline; }
-.changelog ul { margin: 6px 0 0; padding-left: 18px; }
-.changelog li { margin: 2px 0; }
 @media (max-width: 860px) { .refwrap { padding: 0 12px; } }
-@media print { #btnRefToday, .changelog { display: none !important; } .refbar { background: transparent; padding: 0 0 6px; } .refwrap { padding: 0; margin: 0; } }
-
+@media print { #btnRefToday, 
 /* 인사기록 PDF */
 .pdf-new { width: 100%; margin-top: 8px; }
 .doc-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
