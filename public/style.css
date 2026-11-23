@@ -267,6 +267,10 @@ table.rows { width: 100%; border-collapse: collapse; min-width: 800px; }
   .cmp .ps-warn { margin-top: 8px; padding: 6px 12px; }
   .tiny .ps-sum, .tiny .ps-sum + * { }
   .tiny table.ps-sum, .tiny .sumsec { display: none; }
+  .ps-sum tr.ed th { color: #9a6400; } .ps-sum tr.ed td { border-top: 1px dashed #e0b660; font-weight: 700; }
+  .ps-sum tr.ed td.same { color: #8a9595 !important; font-weight: 500; background: #fff !important; }
+  .ps-sum tr.ed td.diff { background: #fff3d6 !important; color: #8a5400 !important; }
+  .ps-sum tr.ed td.na { color: #b5bebe !important; background: #fff !important; font-weight: 400; }
   .ps-sum thead th.t { color: #0f5c5c; border-bottom-color: #0f5c5c; background: #e4f2f0 !important; } .ps-sum td.t { background: #f1f8f7 !important; color: #0f5c5c; }
   .ps-sum thead th.b { color: #6a4fb3; border-bottom-color: #6a4fb3; background: #f1ecfb !important; } .ps-sum td.b { background: #f8f5fd !important; color: #4d3a8f; }
   .ps-sum thead th.r { color: #c0508a; border-bottom-color: #c0508a; background: #fcecf4 !important; } .ps-sum td.r { background: #fef6fa !important; color: #9a3a6c; }

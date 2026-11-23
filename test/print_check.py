@@ -8,7 +8,9 @@ with sync_playwright() as pw:
     with pg.expect_file_chooser() as fc: pg.click('#btnPdfEmpty')
     fc.value.set_files(s); pg.wait_for_selector('#sumGrid .sum-card', timeout=20000)
     import sys
-    if len(sys.argv)>1: pg.uncheck('#groupChk'); pg.wait_for_timeout(300)
+    if 'ungroup' in sys.argv: pg.uncheck('#groupChk'); pg.wait_for_timeout(300)
+    if 'edit' in sys.argv:
+        r=pg.locator('#rowsBody tr').nth(1); r.locator('.f-start').fill('2025-3-1'); r.locator('.f-start').blur(); pg.wait_for_timeout(300)
     pg.evaluate("window.print=()=>{}"); pg.click('#btnPrint'); pg.wait_for_timeout(300)
     pg.emulate_media(media='print')
     pg.pdf(path='/tmp/sheet.pdf', format='A4', margin={'top':'12mm','bottom':'12mm','left':'12mm','right':'12mm'}, prefer_css_page_size=True, print_background=True)

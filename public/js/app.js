@@ -663,20 +663,32 @@
 
     if (doc) {
       var c = PC.compute(doc.recs, effRef(), CC);
-      var items = [['총경력', c.total, 0, 't'], ['부장', c.buzang, 0, 'b'], ['연구학교', c.research, 0, 'r'], ['학교폭력 예방기여', c.violence, 1, 'v'], ['파견', c.dispatch, 0, 'd'], ['휴직', c.leave, 0, 'l']];
-      if (c.pro.segs.length) items.push(['전문직', c.pro, 0, 'j']);
-      var ss = sec('인사기록 PDF 요약'); ss.classList.add('sumsec'); box.appendChild(ss);
+      var items = [['총경력', c.total, 0, 't', 'total'], ['부장', c.buzang, 0, 'b', 'buzang'], ['연구학교', c.research, 0, 'r', ''], ['학교폭력 예방기여', c.violence, 1, 'v', ''], ['파견', c.dispatch, 0, 'd', 'dispatch'], ['휴직', c.leave, 0, 'l', 'leave']];
+      if (c.pro.segs.length) items.push(['전문직', c.pro, 0, 'j', 'pro']);
+      var ped = editedFromRows(p, a, doc.recs);
+      var ss = sec('인사기록 PDF 요약' + (ped ? ' · 입력창 수정 내용 함께 표시' : '')); ss.classList.add('sumsec'); box.appendChild(ss);
       var tb = h('table', { class: 'ps-sum' }, h('thead', null, h('tr', null, h('th', { text: '인사기록 PDF' }), items.map(function (it) { return h('th', { class: it[3], text: it[0] }); }))),
         h('tbody', null,
           h('tr', null, h('th', { text: '경력' }), items.map(function (it) { return h('td', { class: it[3], text: fmtTotal(it[1].sum) }); })),
-          h('tr', null, h('th', { text: '인정' }), items.map(function (it) { return h('td', { class: it[3], text: it[2] ? violenceRecog(it[1].sum) + ' (한시적)' : fmtRecog(it[1].rec) }); }))));
+          h('tr', null, h('th', { text: ped ? 'PDF 인정' : '인정' }), items.map(function (it) { return h('td', { class: it[3], text: it[2] ? violenceRecog(it[1].sum) + ' (한시적)' : fmtRecog(it[1].rec) }); })),
+          ped ? h('tr', { class: 'ed' }, h('th', { text: '입력창 경력' }), items.map(function (it) {
+            var e = it[4] && ped[it[4]];
+            if (!e) return h('td', { class: it[3] + ' na', text: '—' });
+            var same = fmtTotal(e.sum) === fmtTotal(it[1].sum);
+            return h('td', { class: it[3] + (same ? ' same' : ' diff'), text: fmtTotal(e.sum) + (same ? '' : ' ▲') });
+          })) : null,
+          ped ? h('tr', { class: 'ed' }, h('th', { text: '입력창 인정' }), items.map(function (it) {
+            var e = it[4] && ped[it[4]];
+            if (!e) return h('td', { class: it[3] + ' na', text: '—' });
+            return h('td', { class: it[3] + (fmtTotal(e.sum) === fmtTotal(it[1].sum) ? ' same' : ' diff'), text: fmtRecog(e.rec) });
+          })) : null));
       box.appendChild(tb);
     }
 
     var list = [];
     p.rows.forEach(function (r, i) { if (r.memo || r.start || r.end || r.sRaw || r.eRaw) list.push(i); });
     var dense = ' ' + (list.length <= 8 ? 'sp' : list.length <= 11 ? 'md' : list.length <= 15 ? 'lg' : list.length <= 24 ? 'dense' : 'xd');
-    box.className = 'print-sheet' + (list.length > 11 ? ' cmp' : '') + (list.length > 24 ? ' tiny' : '');
+    box.className = 'print-sheet' + (list.length > 11 || (doc && editedFromRows(p, a, doc.recs)) ? ' cmp' : '') + (list.length > 24 ? ' tiny' : '');
     box.appendChild(sec('경력 내역 · ' + list.length + '건'));
     var body = h('tbody');
     list.forEach(function (i, n) {
