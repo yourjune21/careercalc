@@ -663,13 +663,13 @@
 
     if (doc) {
       var c = PC.compute(doc.recs, effRef(), CC);
-      var items = [['총경력', c.total, 0], ['부장', c.buzang, 0], ['연구학교', c.research, 0], ['학교폭력 예방기여', c.violence, 1], ['파견', c.dispatch, 0], ['휴직', c.leave, 0]];
-      if (c.pro.segs.length) items.push(['전문직', c.pro, 0]);
+      var items = [['총경력', c.total, 0, 't'], ['부장', c.buzang, 0, 'b'], ['연구학교', c.research, 0, 'r'], ['학교폭력 예방기여', c.violence, 1, 'v'], ['파견', c.dispatch, 0, 'd'], ['휴직', c.leave, 0, 'l']];
+      if (c.pro.segs.length) items.push(['전문직', c.pro, 0, 'j']);
       var ss = sec('인사기록 PDF 요약'); ss.classList.add('sumsec'); box.appendChild(ss);
-      var tb = h('table', { class: 'ps-sum' }, h('thead', null, h('tr', null, h('th', { text: '인사기록 PDF' }), items.map(function (it) { return h('th', { text: it[0] }); }))),
+      var tb = h('table', { class: 'ps-sum' }, h('thead', null, h('tr', null, h('th', { text: '인사기록 PDF' }), items.map(function (it) { return h('th', { class: it[3], text: it[0] }); }))),
         h('tbody', null,
-          h('tr', null, h('th', { text: '경력' }), items.map(function (it) { return h('td', { text: fmtTotal(it[1].sum) }); })),
-          h('tr', null, h('th', { text: '인정' }), items.map(function (it) { return h('td', { text: it[2] ? violenceRecog(it[1].sum) + ' (한시적)' : fmtRecog(it[1].rec) }); }))));
+          h('tr', null, h('th', { text: '경력' }), items.map(function (it) { return h('td', { class: it[3], text: fmtTotal(it[1].sum) }); })),
+          h('tr', null, h('th', { text: '인정' }), items.map(function (it) { return h('td', { class: it[3], text: it[2] ? violenceRecog(it[1].sum) + ' (한시적)' : fmtRecog(it[1].rec) }); }))));
       box.appendChild(tb);
     }
 
@@ -874,6 +874,7 @@
       $('#milInfo').textContent = mil.map(function (r) { return CC.fmtIso(r.s) + '~' + CC.fmtIso(r.e) + ' (' + recLen(r) + ')'; }).join(', ');
     }
     var ed = a ? editedFromRows(p, a, recs) : null;
+    var tbody = h('tbody');
     [['total', '총경력', 't', '재직 기간에서 휴직 등을 뺀 기간' + (mil.some(function (r) { return !r.x; }) ? ' · 군 경력 포함' : '')],
      ['buzang', '부장 경력', 'b', '부장교사·부장담임 보직 기간'],
      ['research', '연구학교 경력', 'r', '12.가산점 ‘연구·시범학교’ 기간'],
@@ -885,17 +886,21 @@
       var ul = h('ul');
       r.segs.forEach(function (g, i) { ul.appendChild(h('li', { text: CC.fmtSer(g.s) + '~' + CC.fmtSer(g.e) + ' (' + CC.fmtDur(r.durs[i]) + ')' })); });
       var e2 = ed && ed[d[0]] ? ed[d[0]] : null, same = e2 && fmtTotal(e2.sum) === fmtTotal(r.sum);
-      grid.appendChild(h('div', { class: 'sum-card ' + d[2] + (e2 && !same ? ' edited' : '') },
-        h('div', { class: 'sum-label', text: d[1] }),
-        e2 ? h('div', { class: 'sum-pdf muted small', text: 'PDF 기록' }) : null,
-        h('div', { class: 'sum-value', text: fmtTotal(r.sum) }),
-        e2 ? h('div', { class: 'sum-edit' + (same ? ' same' : '') }, h('span', { class: 'muted small', text: same ? '입력창 기준(PDF와 같음)' : '입력창 수정 기준' }), h('b', { text: fmtTotal(e2.sum) }), h('span', { class: 'muted small', text: ' 인정 ' + fmtRecog(e2.rec) })) : null,
-        d[0] === 'violence'
-          ? h('div', { class: 'sum-rec' }, '인정 경력(한시적 · 연 단위) ', h('b', { text: violenceRecog(r.sum) }), h('span', { class: 'muted small', text: ' 1년 미만은 버림' }))
-          : h('div', { class: 'sum-rec' }, '인정 경력 ', h('b', { text: fmtRecog(r.rec) })),
-        h('div', { class: 'sum-rec', text: d[3] }),
-        r.segs.length ? h('details', { class: 'sum-seg' }, h('summary', { text: '기간 ' + r.segs.length + '구간 보기' }), ul) : h('div', { class: 'sum-seg', text: '해당 기록 없음' })));
+      tbody.appendChild(h('tr', { class: 'sum-card ' + d[2] + (e2 && !same ? ' edited' : '') },
+        h('td', { class: 'sum-name' }, h('span', { class: 'sum-chip', text: d[1] })),
+        h('td', { class: 'sum-vcell' },
+          e2 ? h('div', { class: 'sum-pdf muted small', text: 'PDF 기록' }) : null,
+          h('div', { class: 'sum-value', text: fmtTotal(r.sum) }),
+          e2 ? h('div', { class: 'sum-edit' + (same ? ' same' : '') }, h('span', { class: 'muted small', text: same ? '입력창 기준(PDF와 같음)' : '입력창 수정 기준' }), h('b', { text: fmtTotal(e2.sum) }), h('span', { class: 'muted small', text: ' 인정 ' + fmtRecog(e2.rec) })) : null),
+        h('td', { class: 'sum-rcell' },
+          d[0] === 'violence'
+            ? h('div', { class: 'sum-rec' }, h('b', { text: violenceRecog(r.sum) }), h('span', { class: 'muted small', text: ' 한시적 · 1년 미만 버림' }))
+            : h('div', { class: 'sum-rec' }, h('b', { text: fmtRecog(r.rec) }))),
+        h('td', { class: 'sum-note' }, h('div', { text: d[3] }),
+          r.segs.length ? h('details', { class: 'sum-seg' }, h('summary', { text: '기간 ' + r.segs.length + '구간 보기' }), ul) : h('div', { class: 'sum-seg', text: '해당 기록 없음' }))));
     });
+    grid.appendChild(h('table', { class: 'sum-table' },
+      h('thead', null, h('tr', null, h('th', { text: '항목' }), h('th', { text: '경력' }), h('th', { text: '인정 경력' }), h('th', { text: '기준 · 기간' }))), tbody));
     $('#docNote').textContent = '기준일 ' + CC.fmtIso(effRef()) + '까지 계산 · 기준일을 바꾸면 자동으로 다시 계산됩니다 · 인정 경력은 15일 이상이면 1개월 올림' + (ed ? ' · 입력창을 수정해서 PDF 기록과 입력창 기준 값을 함께 표시합니다 (연구학교·학교폭력은 입력창에 없어 PDF 값만)' : '');
 
     var order = { S: 0, H: 0, B: 0, D: 0, J: 0, M: 0, L: 1, R: 2, V: 2 };

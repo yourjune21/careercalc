@@ -267,6 +267,13 @@ table.rows { width: 100%; border-collapse: collapse; min-width: 800px; }
   .cmp .ps-warn { margin-top: 8px; padding: 6px 12px; }
   .tiny .ps-sum, .tiny .ps-sum + * { }
   .tiny table.ps-sum, .tiny .sumsec { display: none; }
+  .ps-sum thead th.t { color: #0f5c5c; border-bottom-color: #0f5c5c; background: #e4f2f0 !important; } .ps-sum td.t { background: #f1f8f7 !important; color: #0f5c5c; }
+  .ps-sum thead th.b { color: #6a4fb3; border-bottom-color: #6a4fb3; background: #f1ecfb !important; } .ps-sum td.b { background: #f8f5fd !important; color: #4d3a8f; }
+  .ps-sum thead th.r { color: #c0508a; border-bottom-color: #c0508a; background: #fcecf4 !important; } .ps-sum td.r { background: #fef6fa !important; color: #9a3a6c; }
+  .ps-sum thead th.v { color: #1d6fa5; border-bottom-color: #1d6fa5; background: #e8f2fa !important; } .ps-sum td.v { background: #f4f9fd !important; color: #14527d; }
+  .ps-sum thead th.d { color: #b3722f; border-bottom-color: #b3722f; background: #fcf1e3 !important; } .ps-sum td.d { background: #fef8f0 !important; color: #8a5420; }
+  .ps-sum thead th.l { color: #a1473f; border-bottom-color: #a1473f; background: #faebe9 !important; } .ps-sum td.l { background: #fdf5f4 !important; color: #7d332c; }
+  .ps-sum thead th.j { color: #4d7a2e; border-bottom-color: #4d7a2e; background: #eef5e6 !important; } .ps-sum td.j { background: #f7faf3 !important; color: #3b6322; }
   .ps-empty { color: #777; }
   .ps-foot { margin: 0; padding-top: 9px; border-top: 1px solid #cfdcda; font-size: 9.5px; color: #7a8a8a; display: flex; justify-content: space-between; }
 }
@@ -299,7 +306,7 @@ table.rows { width: 100%; border-collapse: collapse; min-width: 800px; }
 .drop.over, .people.over { border-color: var(--accent); background: var(--accent-soft); }
 .sum-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 14px; }
 .sum-card { border: 1px solid var(--line); border-left: 5px solid var(--c, var(--accent)); border-radius: 10px; padding: 12px 14px; background: #fff; }
-.sum-card.t { --c: #0f5c5c; } .sum-card.b { --c: #6a4fb3; } .sum-card.v { --c: #1d6fa5; } .sum-card.d { --c: #b3722f; } .sum-card.l { --c: #a1473f; } .sum-card.j { --c: #4d7a2e; } .sum-card.r { --c: #c0508a; }
+.sum-card.t { --c: #0f5c5c; --bg: #e4f2f0; } .sum-card.b { --c: #6a4fb3; } .sum-card.v { --c: #1d6fa5; } .sum-card.d { --c: #b3722f; } .sum-card.l { --c: #a1473f; } .sum-card.j { --c: #4d7a2e; } .sum-card.r { --c: #c0508a; }
 .doc-who { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin-top: 14px; padding: 10px 14px; border-radius: 10px; background: #f4f1e8; }
 .doc-who .who-name { font-size: 20px; } .doc-who .who-org { font-size: 16px; } .doc-who .who-pos { font-size: 14px; color: var(--muted, #666); }
 .sum-label { font-size: 13px; font-weight: 700; color: var(--c); }
@@ -386,8 +393,6 @@ h2 .badge { font-size: 12px; margin-left: 6px; }
 .rows-fold > summary::before { content: '▸ '; color: var(--accent); }
 .rows-fold[open] > summary::before { content: '▾ '; }
 .rows-fold > summary::-webkit-details-marker { display: none; }
-.sum-card.b, .sum-card.v, .sum-card.d, .sum-card.l, .sum-card.j, .sum-card.r { --c: #7b8c8c; }
-.sum-card.t { border-left-width: 6px; background: #f2f9f7; }
 .people-list { max-height: 55vh; overflow-y: auto; }
 .chip[title] { cursor: help; }
 @media (max-width: 700px) {
@@ -480,3 +485,36 @@ h2 .badge { font-size: 12px; margin-left: 6px; }
   .mil-stats { grid-template-columns: 1fr; gap: 10px; }
   .mil-stat + .mil-stat { border-left: 0; padding-left: 4px; border-top: 1px solid #d9cff2; padding-top: 10px; }
 }
+
+/* ---- 인사기록 요약 표 (v1.31) ---- */
+.sum-grid { display: block; margin-top: 14px; }
+.sum-table { width: 100%; border-collapse: separate; border-spacing: 0 6px; }
+.sum-table thead th { text-align: left; font-size: 12px; font-weight: 700; color: var(--muted); padding: 2px 12px; letter-spacing: .04em; }
+.sum-table td { padding: 10px 12px; background: var(--bg, #fff); vertical-align: middle; border-top: 1px solid var(--bd, var(--line)); border-bottom: 1px solid var(--bd, var(--line)); }
+.sum-table td:first-child { border-left: 6px solid var(--c); border-radius: 10px 0 0 10px; border-top-left-radius: 10px; width: 190px; }
+.sum-table td:last-child { border-right: 1px solid var(--bd, var(--line)); border-radius: 0 10px 10px 0; }
+.sum-table td:first-child { border-left-color: var(--c); }
+.sum-chip { display: inline-block; padding: 3px 12px; border-radius: 999px; background: var(--c); color: #fff; font-size: 13px; font-weight: 700; white-space: nowrap; }
+.sum-table .sum-value { font-size: 18px; margin: 0; white-space: nowrap; color: var(--c); }
+.sum-table .sum-rec b { font-size: 17px; color: var(--ink); white-space: nowrap; }
+.sum-table .sum-rcell { width: 150px; } .sum-table .sum-vcell { width: 230px; }
+.sum-table .sum-note { font-size: 12.5px; color: var(--muted); }
+.sum-table .sum-seg { margin-top: 4px; }
+.sum-card.t { --bg: #e4f2f0; --bd: #a8d3cd; } .sum-card.t .sum-value { font-size: 21px; } .sum-card.t .sum-rec b { font-size: 20px; }
+.sum-card.b { --c: #6a4fb3; --bg: #f1ecfb; --bd: #d4c8f0; } .sum-card.r { --c: #c0508a; --bg: #fcecf4; --bd: #f0cadd; }
+.sum-card.v { --c: #1d6fa5; --bg: #e8f2fa; --bd: #c3dcee; } .sum-card.d { --c: #b3722f; --bg: #fcf1e3; --bd: #efd6b4; }
+.sum-card.l { --c: #a1473f; --bg: #faebe9; --bd: #eac6c2; } .sum-card.j { --c: #4d7a2e; --bg: #eef5e6; --bd: #cfe2bd; }
+.sum-card.edited td { box-shadow: inset 0 0 0 1px #e0b660; }
+.sum-card .sum-edit { margin: 3px 0 0; }
+@media (max-width: 760px) {
+  .sum-table thead { display: none; }
+  .sum-table, .sum-table tbody { display: block; }
+  .sum-table tr { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; margin-bottom: 8px; padding: 10px 12px; background: var(--bg); border: 1px solid var(--bd); border-left: 6px solid var(--c); border-radius: 10px; }
+  .sum-table td { display: block; padding: 2px 0; border: 0 !important; border-radius: 0 !important; width: auto !important; background: transparent; }
+  .sum-table td.sum-name { grid-column: 1 / -1; }
+  .sum-table td.sum-note { grid-column: 1 / -1; }
+  .sum-table td.sum-rcell::before { content: '인정 '; font-size: 11px; color: var(--muted); }
+}
+@media print { .sum-table td { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+
+@media (min-width: 761px) { .sum-table tr.sum-card { border: 0; border-radius: 0; padding: 0; background: transparent; } }
