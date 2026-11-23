@@ -655,3 +655,4 @@ h2 .badge { font-size: 12px; margin-left: 6px; }
 }
 .opt-row{display:flex;align-items:center;gap:8px;padding:6px 2px;font-weight:600;cursor:pointer}
 @media print{.opt-row{display:none}}
+.ver-tag{font-size:12px;font-weight:600;color:#6b7f7d;margin-left:6px;vertical-align:middle;letter-spacing:0}

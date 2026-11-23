@@ -1529,6 +1529,7 @@
   (function () {
     var info = window.APP_INFO; if (!info) return;
     $('#verLine').textContent = '경력 계산기 v' + info.version + ' (' + info.date + ')';
+    $('#verTag').textContent = 'v' + info.version;
   })();
 
   /* ---------- 알림 ---------- */
