@@ -398,3 +398,42 @@ h2 .badge { font-size: 12px; margin-left: 6px; }
 #docCard.collapsed .doc-intro { display: none; }
 #docCard.collapsed { padding-bottom: 10px; }
 #docInner[hidden] { display: none; }
+
+/* 입력창 수정 시 PDF 값과 함께 표시 */
+.sum-card .sum-pdf { margin-top: 2px; }
+.sum-card .sum-edit { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; margin: 2px 0 4px; padding: 4px 8px; border-radius: 6px; background: #fff7e6; border: 1px solid #f0d9a8; }
+.sum-card .sum-edit b { font-size: 16px; }
+.sum-card .sum-edit.same { background: #f2f6f6; border-color: var(--line); }
+.sum-card.edited { border-color: #e0b660; }
+
+/* ---- 경력 합계 카드 개편 (v1.29) ---- */
+.card.total { display: block; padding: 16px 18px; }
+.total-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.total-head h3 { font-size: 16px; margin: 0; }
+.total-board { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.total-board .total-item.recog { display: flex; flex-direction: column; justify-content: center; padding: 18px 20px; background: linear-gradient(135deg, #0f5c5c, #1f7a74); }
+.total-board .total-item.recog .total-label { font-size: 14px; letter-spacing: .02em; }
+.total-board .total-item.recog .total-value { font-size: 40px; margin: 4px 0 6px; }
+.total-side { display: grid; grid-template-rows: 1fr 1fr; gap: 12px; }
+.total-side .total-item { display: flex; flex-direction: column; justify-content: center; padding: 10px 16px; }
+.total-side .total-value { font-size: 22px; }
+.total-item.plain { background: #fff; }
+.total-item.plain .total-label { color: var(--muted); }
+.total-mil { margin-top: 12px; border: 1px solid #cdbfec; background: #f6f2fd; border-radius: 12px; padding: 12px 16px; }
+.mil-title { font-size: 13px; font-weight: 700; color: #4d3a8f; display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.mil-badge { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: #6a4fb3; color: #fff; font-size: 12px; }
+.mil-stats { display: grid; grid-template-columns: 1fr 1fr; }
+.mil-stat { padding: 0 4px; }
+.mil-stat + .mil-stat { border-left: 1px solid #d9cff2; padding-left: 18px; }
+.mil-stat .total-label { color: #4d3a8f; }
+.mil-stat .total-value { font-size: 22px; color: #2f2263; }
+.total-help { margin-top: 10px; }
+.total-help summary { cursor: pointer; font-size: 12px; color: var(--muted); }
+.total-help .total-explain { margin: 6px 0 0; }
+.total-help[hidden], .total-mil[hidden] { display: none; }
+@media (max-width: 760px) {
+  .total-board { grid-template-columns: 1fr; }
+  .total-board .total-item.recog .total-value { font-size: 32px; }
+  .mil-stats { grid-template-columns: 1fr; gap: 10px; }
+  .mil-stat + .mil-stat { border-left: 0; padding-left: 4px; border-top: 1px solid #d9cff2; padding-top: 10px; }
+}

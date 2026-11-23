@@ -1,5 +1,5 @@
 /*
- * 사람별 데이터 저장 (최대 100명)
+ * 사람별 데이터 저장 (브라우저 저장소 최대 1000명, 쿠키 방식은 용량 한도 안에서)
  *
  * 저장 방식 두 가지:
  *   - 'cookie' : 사람마다 쿠키 1개(cc_p1 ~ cc_p100) + 목록 쿠키(cc_i)
@@ -16,7 +16,7 @@
   'use strict';
 
   var CC = root.CareerCalc;
-  var MAX_PEOPLE = 100, MAX_ROWS = 50;
+  var MAX_PEOPLE = 1000, MAX_ROWS = 50;
   var COOKIE_BUDGET = 12000;        // 쿠키 전체 한도(이름+값, 바이트 근사)
   var VALUE_MAX = 3800;             // 쿠키 1개 값 한도
   var MAX_AGE = 34560000;           // 400일 (브라우저 최대 허용치), 저장할 때마다 갱신

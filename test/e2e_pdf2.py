@@ -23,4 +23,15 @@ with sync_playwright() as pw:
     # 이름으로 먼저 추가한 같은 이름 → 그 사람에 채움
     pg.fill('#newName','김철수'); pg.press('#newName','Enter'); pg.wait_for_timeout(200)
     check('총 3명', pg.locator('#peopleList .person').count()==3)
+    # 여러 파일 한꺼번에 (정상 1 + 잘못된 파일 1 + 같은 이름 중복 1)
+    open('/tmp/bad.pdf','wb').write(b'%PDF-1.4 not really')
+    msgs=[]
+    pg.on('dialog', lambda d: (msgs.append(d.message), d.accept()))
+    n0=pg.locator('#peopleList .person').count()
+    pg.set_input_files('#pdfFile', [sample, '/tmp/bad.pdf', sample]); 
+    pg.locator('#docMsg', has_text='개 중').wait_for(timeout=40000)
+    m=pg.inner_text('#docMsg')
+    check('여러 파일 요약 안내', 'PDF 3개 중 2명' in m and 'bad.pdf' in m, m)
+    check('같은 이름 재첨부는 확인창', any('다시 불러오겠습니까' in x for x in msgs), msgs)
+    check('사람 수 불변(이미 안영준 있음)', pg.locator('#peopleList .person').count()==n0, (n0, pg.locator('#peopleList .person').count()))
     print('FAILED:', errs or 'none')
