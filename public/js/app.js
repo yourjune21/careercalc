@@ -708,8 +708,8 @@
   });
   /* ---------- 한 장 인쇄용 결과서 ---------- */
   function two(n) { return n < 10 ? '0' + n : '' + n; }
-  function buildPrintSheet() {
-    var box = $('#printSheet'), p = current();
+  function buildPrintSheet() { buildSheetFor(current(), $('#printSheet')); }
+  function buildSheetFor(p, box) {
     box.textContent = '';
     if (!p) return;
     var a = analyze(p), now = new Date();
@@ -786,7 +786,46 @@
     box.appendChild(h('div', { class: 'ps-spacer' }));
     box.appendChild(h('p', { class: 'ps-foot', text: '민법 역법(초일 산입·말일 만료)으로 계산 · 인정 경력은 일수 15일 이상이면 1개월 올림 · 경력 계산기 v' + (window.APP_INFO ? window.APP_INFO.version : '') }));
   }
-  window.addEventListener('beforeprint', buildPrintSheet);
+  window.addEventListener('beforeprint', function () { if (!document.body.classList.contains('print-multi')) buildPrintSheet(); });
+  window.addEventListener('afterprint', function () { document.body.classList.remove('print-multi'); var m = $('#printMulti'); if (m) m.textContent = ''; });
+
+  /* ---------- 여러 사람 한꺼번에 출력 ---------- */
+  (function () {
+    var back = $('#multiBack'), list = $('#multiList'), cnt = $('#multiCount'), go = $('#multiGo'), q = $('#multiSearch');
+    var sel = {};
+    function selCount() { return store.people.filter(function (p) { return sel[p.id]; }).length; }
+    function sync() { var n = selCount(); cnt.textContent = '선택 ' + n + '명 / 전체 ' + store.people.length + '명'; go.disabled = !n; go.textContent = n ? '선택한 ' + n + '명 출력 (1명당 1장)' : '출력할 사람을 선택하세요'; }
+    function draw() {
+      list.textContent = '';
+      var t = q.value.trim().toLowerCase();
+      store.people.filter(function (p) { return !t || p.name.toLowerCase().indexOf(t) >= 0; }).forEach(function (p) {
+        var a = analyze(p), meta = a.okCount ? '인정 ' + fmtRecog(CC.recognize(a.uniqTotal)) : '입력 없음';
+        var cb = h('input', { type: 'checkbox', 'data-id': p.id }); cb.checked = !!sel[p.id];
+        list.appendChild(h('li', null, h('label', { class: 'multi-item' }, cb, h('b', { text: p.name }), h('span', { class: 'muted small', text: (p.doc && p.doc.org ? p.doc.org + ' · ' : '') + meta }))));
+      });
+      sync();
+    }
+    function open() { sel = {}; if (current()) sel[current().id] = true; q.value = ''; draw(); back.hidden = false; q.focus(); }
+    function close() { back.hidden = true; }
+    $('#btnMulti').addEventListener('click', open);
+    $('#multiClose').addEventListener('click', close);
+    back.addEventListener('click', function (e) { if (e.target === back) close(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !back.hidden) close(); });
+    q.addEventListener('input', draw);
+    list.addEventListener('change', function (e) { var id = e.target.getAttribute('data-id'); if (id == null) return; sel[id] = e.target.checked; sync(); });
+    function setAll(v) { [].forEach.call(list.querySelectorAll('input[type=checkbox]'), function (c) { c.checked = v; sel[c.getAttribute('data-id')] = v; }); sync(); }
+    $('#multiAll').addEventListener('click', function () { setAll(true); });
+    $('#multiNone').addEventListener('click', function () { setAll(false); });
+    go.addEventListener('click', function () {
+      var people = store.people.filter(function (p) { return sel[p.id]; });
+      if (!people.length) return;
+      var m = $('#printMulti'); m.textContent = '';
+      people.forEach(function (p) { var sec = h('section', { class: 'print-sheet' }); buildSheetFor(p, sec); m.appendChild(sec); });
+      document.body.classList.add('print-multi');
+      close();
+      window.print();
+    });
+  })();
   $('#btnPrint').addEventListener('click', function () { buildPrintSheet(); window.print(); });
 
   /* ---------- 저장 방식·백업 ---------- */

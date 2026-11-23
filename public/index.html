@@ -10,7 +10,16 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="set-back" id="setBack" hidden>
+  <div class="set-back" id="multiBack" hidden>
+  <section class="set-modal" role="dialog" aria-modal="true" aria-labelledby="multiTitle">
+    <div class="set-head"><h2 id="multiTitle">여러 사람 출력</h2><button type="button" class="btn ghost" id="multiClose" aria-label="닫기">닫기</button></div>
+    <p class="muted small">출력할 사람을 선택하면 한 사람당 A4 한 장씩 이어서 인쇄합니다. (PDF로 저장도 가능)</p>
+    <div class="multi-tools"><input id="multiSearch" type="search" placeholder="이름 검색" autocomplete="off"><button type="button" class="btn" id="multiAll">전체 선택</button><button type="button" class="btn" id="multiNone">선택 해제</button></div>
+    <ul class="multi-list" id="multiList"></ul>
+    <div class="set-foot"><span class="muted small" id="multiCount"></span> <button type="button" class="btn btn-print" id="multiGo" disabled>출력</button></div>
+  </section>
+</div>
+<div class="set-back" id="setBack" hidden>
   <section class="set-modal" role="dialog" aria-modal="true" aria-labelledby="setTitle">
     <div class="set-head"><h2 id="setTitle">설정</h2><button type="button" class="btn ghost" id="setClose" aria-label="닫기">닫기</button></div>
     <h3 class="set-sub">출력 순서 설정</h3>
@@ -75,6 +84,7 @@
       </div>
       <input id="peopleSearch" class="search" type="search" placeholder="이름 검색" aria-label="이름 검색" hidden>
       <ul id="peopleList" class="people-list"></ul>
+      <button type="button" class="btn btn-print multi-btn" id="btnMulti">🖨 여러 사람 출력</button>
     </aside>
 
     <section class="work" aria-live="off">
@@ -139,7 +149,7 @@
             <h3>경력 합계 <span class="muted small">입력창 기준</span></h3>
             <div class="total-actions">
               <button type="button" class="btn primary" id="btnCopy">결과 복사</button>
-              <button type="button" class="btn" id="btnPrint" title="입력 내용을 A4 한 장으로 정리해 인쇄합니다">한 장 인쇄</button>
+              <button type="button" class="btn btn-print" id="btnPrint" title="입력 내용을 A4 한 장으로 정리해 인쇄합니다">한 장 인쇄</button>
             </div>
           </div>
           <div class="total-board">
@@ -220,6 +230,7 @@
     </section>
   </main>
   <section id="printSheet" class="print-sheet" aria-hidden="true"></section>
+  <div id="printMulti" aria-hidden="true"></div>
 
   <footer class="foot">
     <div class="foot-inner card">
