@@ -172,6 +172,23 @@
       if (os <= oe) reasons.push({ label: '유공기간 중 ' + nm, s: os, e: oe, why: '유공기간(' + CC.fmtSer(ap.from) + '~' + CC.fmtSer(ap.to) + ') 중 ' + nm + '(' + CC.fmtSer(s) + '~' + CC.fmtSer(e) + ')과 ' + CC.fmtDur(CC.diff(os, oe)) + ' 겹침' });
       if (s <= ap.base && ap.base <= e) reasons.push({ label: '기준일 당시 ' + nm, s: ap.base, e: ap.base, why: '표창 기준일(' + CC.fmtSer(ap.base) + ')이 ' + nm + ' 기간(' + CC.fmtSer(s) + '~' + CC.fmtSer(e) + ') 안에 있음' });
     });
+    /* 재직기간 확인: 유공기간·표창 기준일이 최초 근무 시작일 ~ 마지막 근무 종료일 안에 있어야 함 */
+    var first = null, last = null, open = false;
+    recs.forEach(function (r) {
+      if (r.x || ['S', 'H', 'B', 'D', 'J'].indexOf(r.k) < 0) return;
+      var s0 = CC.isoToSer(r.s); if (s0 == null) return;
+      if (first == null || s0 < first) first = s0;
+      if (!r.e) open = true; else { var e0 = CC.isoToSer(r.e); if (e0 != null && (last == null || e0 > last)) last = e0; }
+    });
+    if (first != null) {
+      var F = CC.fmtSer;
+      if (ap.from < first) reasons.push({ label: '최초 근무 이전', s: ap.from, e: Math.min(ap.to, first - 1), why: '유공기간 시작일(' + F(ap.from) + ')이 최초 근무 시작일(' + F(first) + ')보다 앞섬' });
+      if (ap.base < first) reasons.push({ label: '재직 전 기준일', s: ap.base, e: ap.base, why: '표창 기준일(' + F(ap.base) + ')이 최초 근무 시작일(' + F(first) + ')보다 앞섬' });
+      if (!open && last != null) {
+        if (ap.to > last) reasons.push({ label: '근무 종료 이후', s: Math.max(ap.from, last + 1), e: ap.to, why: '유공기간 종료일(' + F(ap.to) + ')이 마지막 근무 종료일(' + F(last) + ')보다 뒤임' });
+        if (ap.base > last) reasons.push({ label: '재직 후 기준일', s: ap.base, e: ap.base, why: '표창 기준일(' + F(ap.base) + ')이 마지막 근무 종료일(' + F(last) + ')보다 뒤임' });
+      }
+    }
     reasons.sort(function (a, b) { return a.s - b.s; });
     return { status: reasons.length ? 'no' : 'ok', reasons: reasons };
   }
@@ -184,7 +201,7 @@
     award.slots.forEach(function (sl, i) { var r = awardCheck(p, sl); if (r) out.push({ i: i, res: r }); });
     return out;
   }
-  function awardTitleOf(r) { return r.status === 'no' ? awardText(r) : (r.status === 'unknown' ? '인사기록 PDF가 없어 확인할 수 없습니다' : '선택한 경력과 겹치지 않음'); }
+  function awardTitleOf(r) { return r.status === 'no' ? awardText(r) : (r.status === 'unknown' ? '인사기록 PDF가 없어 확인할 수 없습니다' : '재직기간 안이며 선택한 경력과 겹치지 않음'); }
   /** 이름 옆 작은 표시: 검정마다 하나씩 */
   function awardBadge(p, small) {
     var list = awardResults(p).filter(function (x) { return x.res.status !== 'bad'; });
