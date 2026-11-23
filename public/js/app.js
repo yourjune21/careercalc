@@ -236,7 +236,31 @@
   function fmtTotal(t) { return t.years + '년 ' + t.months + '개월 ' + t.days + '일'; }
   function fmtRecog(r) { return r.years + '년 ' + r.months + '개월'; }
 
+  /** 군 경력이 있는 사람: 입력창 경력 + 군 복무를 합쳐(중복은 한 번만) 따로 표시 */
+  function renderMil(p, a) {
+    var box = $('#milTotal');
+    var mil = (p.doc && p.doc.recs ? p.doc.recs : []).filter(function (r) { return r.k === 'M'; });
+    if (!mil.length) { box.hidden = true; return; }
+    var ref = CC.isoToSer(effRef()), segs = [];
+    a.rows.forEach(function (x) { if (x.kind === 'ok') segs.push({ s: x.s, e: x.e }); });
+    mil.forEach(function (r) {
+      var s = CC.isoToSer(r.s), e = CC.isoToSer(r.e);
+      if (s == null || e == null) return;
+      if (ref != null && e > ref) e = ref;
+      if (e >= s) segs.push({ s: s, e: e });
+    });
+    var merged = CC.union(segs), sum = CC.sum(merged.map(function (g) { return CC.diff(g.s, g.e); }));
+    var base = a.okCount ? a.uniqTotal : { years: 0, months: 0, days: 0 };
+    var milOnly = CC.sum(mil.map(function (r) { return CC.diff(CC.isoToSer(r.s), CC.isoToSer(r.e)); }));
+    box.hidden = false;
+    $('#milUniq').textContent = fmtTotal(sum);
+    $('#milUniqNote').textContent = '중복 제외 ' + fmtTotal(base) + ' + 군 경력 ' + fmtTotal(milOnly) + (a.okCount ? ' (겹치는 날은 한 번만)' : '');
+    $('#milRecog').textContent = fmtRecog(CC.recognize(sum));
+    $('#milRecogNote').textContent = sum.days >= 15 ? '일수 15일 이상이라 1개월 올림' : '일수 15일 미만이라 버림';
+  }
+
   function renderTotal(p, a) {
+    renderMil(p, a);
     var v = $('#totalValue'), note = $('#totalNote'), u = $('#totalUniq'), un = $('#totalUniqNote');
     var rv = $('#totalRecog'), rn = $('#totalRecogNote');
     if (!a.okCount) {
@@ -629,21 +653,31 @@
     updateResults(); scheduleSave();
   });
 
-  /** PDF의 재직 기록을 아래 입력창에 한 줄씩 채움 (휴직·가산점·군 복무는 제외) */
+  /** PDF의 재직 기록을 아래 입력창에 한 줄씩 채움 (휴직 기간은 빼고 구간을 나눔 / 가산점·군 복무는 제외) */
   function fillRowsFromDoc(res, target) {
     var ref = CC.isoToSer(effRef());
-    var list = res.records.filter(function (r) { return ['S', 'B', 'D', 'J'].indexOf(r.k) >= 0; })
-      .sort(function (a, b) { return a.s < b.s ? -1 : a.s > b.s ? 1 : 0; }).slice(0, MAX_ROWS);
-    if (!list.length) return 0;
-    var has = target.rows.some(function (r) { return r.memo || r.start || r.end; });
-    if (has && !confirm('아래 입력창에 이미 입력한 경력이 있습니다.\nPDF의 재직 경력 ' + list.length + '건으로 바꿀까요?\n(취소하면 입력창은 그대로 두고 PDF 분석만 반영합니다)')) return 0;
-    target.rows = list.map(function (r) {
-      var e = r.e, es = e ? CC.isoToSer(e) : null;
-      if (es != null && ref != null && es > ref) e = '';       // 기준일 이후 종료 예정 → 비워 두면 기준일까지 계산
-      return { memo: (KIND[r.k] || '재직').slice(0, ST.MEMO_MAX), start: r.s, end: e };
+    var leaves = CC.union(res.records.filter(function (r) { return r.k === 'L' && !r.x; }).map(function (r) {
+      return { s: CC.isoToSer(r.s), e: r.e ? CC.isoToSer(r.e) : ref };
+    }).filter(function (g) { return g.s != null && g.e != null && g.e >= g.s; }));
+    var out = [];
+    res.records.filter(function (r) { return ['S', 'B', 'D', 'J'].indexOf(r.k) >= 0; }).forEach(function (r) {
+      var s = CC.isoToSer(r.s), e = r.e ? CC.isoToSer(r.e) : ref;
+      if (s == null || e == null) return;
+      var open = !r.e || (ref != null && e > ref);               // 종료 미정·기준일 이후 → 기준일까지
+      if (ref != null && e > ref) e = ref;
+      if (e < s) return;
+      CC.subtract([{ s: s, e: e }], leaves).forEach(function (g) {
+        out.push({ memo: (KIND[r.k] || '재직').slice(0, ST.MEMO_MAX), start: CC.serToIso(g.s), end: (open && g.e === e) ? '' : CC.serToIso(g.e), _s: g.s });
+      });
     });
+    out.sort(function (x, y) { return x._s - y._s; });
+    out = out.slice(0, MAX_ROWS);
+    if (!out.length) return 0;
+    var has = target.rows.some(function (r) { return r.memo || r.start || r.end; });
+    if (has && !confirm('아래 입력창에 이미 입력한 경력이 있습니다.\nPDF의 재직 경력 ' + out.length + '줄로 바꿀까요?\n(취소하면 입력창은 그대로 두고 PDF 분석만 반영합니다)')) return 0;
+    target.rows = out.map(function (x) { return { memo: x.memo, start: x.start, end: x.end }; });
     ensureRows(target);
-    return list.length;
+    return out.length;
   }
 
   function applyDoc(res, target) {

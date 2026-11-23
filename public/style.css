@@ -283,3 +283,8 @@ table.rows { width: 100%; border-collapse: collapse; min-width: 800px; }
 
 .empty-drop { margin-top: 18px; text-align: center; }
 .empty-drop .btn { margin-top: 8px; }
+
+.total-item.mil { border-color: #6a4fb3; background: #f3effb; }
+.total-item.mil .total-label { color: #4d3a8f; }
+
+.need { color: var(--warn, #9a4a00); font-weight: 600; }
