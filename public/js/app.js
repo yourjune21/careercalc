@@ -691,7 +691,7 @@
       var who = [p.doc.name, p.doc.org, p.doc.pos].filter(Boolean).join(' · ');
       if (who) lines.push(who);
       [['total', '총경력(체크한 줄 모두 포함)'], ['actual', '실재직 경력(휴직·군 경력 제외)'], ['buzang', '부장 경력'], ['research', '연구학교 경력'], ['violence', '학교폭력 예방기여 경력'], ['mil', '군 경력'], ['dispatch', '파견 경력'], ['leave', '휴직 경력'], ['pro', '전문직 경력']].filter(function (d) { return (d[0] !== 'pro' || c.pro.segs.length) && (d[0] !== 'mil' || hasMil); }).sort(function (x, y) { var o = getOrder(), cl = { total: 't', actual: 'a', buzang: 'b', research: 'r', violence: 'v', dispatch: 'd', pro: 'j', leave: 'l', mil: 'm' }; return o.indexOf(cl[x[0]]) - o.indexOf(cl[y[0]]); }).forEach(function (d) {
-        lines.push(d[1] + ': ' + fmtTotal(c[d[0]].sum) + ' (인정 ' + (d[0] === 'violence' ? violenceRecog(c[d[0]].sum) + ', 한시적 연 단위' : fmtRecog(c[d[0]].rec)) + ')');
+        lines.push(d[1] + ': ' + fmtTotal(c[d[0]].sum) + ' (인정 ' + (d[0] === 'violence' ? violenceRecog(c[d[0]].sum) : fmtRecog(c[d[0]].rec)) + ')');
       });
     }
     return lines.join('\n');
@@ -743,7 +743,7 @@
       var tb = h('table', { class: 'ps-sum' }, h('thead', null, h('tr', null, h('th', { text: '인사기록 PDF' }), items.map(function (it) { return h('th', { class: it[3], text: it[0] }); }))),
         h('tbody', null,
           h('tr', null, h('th', { text: '경력' }), items.map(function (it) { return h('td', { class: it[3], text: fmtTotal(it[1].sum) }); })),
-          h('tr', null, h('th', { text: ped ? 'PDF 인정' : '인정' }), items.map(function (it) { return h('td', { class: it[3], text: it[2] ? violenceRecog(it[1].sum) + ' (한시적)' : fmtRecog(it[1].rec) }); })),
+          h('tr', null, h('th', { text: ped ? 'PDF 인정' : '인정' }), items.map(function (it) { return h('td', { class: it[3], text: it[2] ? violenceRecog(it[1].sum) : fmtRecog(it[1].rec) }); })),
           ped ? h('tr', { class: 'ed' }, h('th', { text: '입력창 경력' }), items.map(function (it) {
             var e = it[4] && ped[it[4]];
             if (!e) return h('td', { class: it[3] + ' na', text: '—' });
@@ -1179,7 +1179,7 @@
           e2 ? h('div', { class: 'sum-edit' + (same ? ' same' : '') }, h('span', { class: 'muted small', text: same ? '입력창 기준(PDF와 같음)' : '입력창 수정 기준' }), h('b', { text: fmtTotal(e2.sum) }), h('span', { class: 'muted small', text: ' 인정 ' + fmtRecog(e2.rec) })) : null),
         h('td', { class: 'sum-rcell' },
           d[0] === 'violence'
-            ? h('div', { class: 'sum-rec' }, h('b', { text: violenceRecog(r.sum) }), h('span', { class: 'muted small', text: ' 한시적 · 1년 미만 버림' }))
+            ? h('div', { class: 'sum-rec' }, h('b', { text: violenceRecog(r.sum) }))
             : h('div', { class: 'sum-rec' }, h('b', { text: fmtRecog(r.rec) }))),
         h('td', { class: 'sum-note' }, h('div', { text: d[3] }),
           r.segs.length ? h('details', { class: 'sum-seg' }, h('summary', { text: '기간 ' + r.segs.length + '구간 보기' }), ul) : h('div', { class: 'sum-seg', text: '해당 기록 없음' }))));
