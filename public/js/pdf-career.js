@@ -180,7 +180,7 @@
       var re = /(\d{4})\.(\d{2})\.(\d{2})\s*~\s*(\d{4})\.(\d{2})\.(\d{2})/g, m;
       while ((m = re.exec(t))) {
         var ms = m[1] + '-' + m[2] + '-' + m[3], me = m[4] + '-' + m[5] + '-' + m[6];
-        if (ms <= me) records.push({ k: 'M', s: ms, e: me, x: 1, lab: '병역 ' + (/(현역|공익|예비역|복무)/.exec(t) || ['복무'])[0] });
+        if (ms <= me) records.push({ k: 'M', s: ms, e: me, x: 0, lab: '병역 ' + (/(현역|공익|예비역|복무)/.exec(t) || ['복무'])[0] });
       }
     });
 
@@ -255,7 +255,8 @@
     }
     var leaves = CC.union(iv(kinds(['L'])));
     return {
-      total: pack(CC.subtract(CC.union(iv(kinds(['S', 'H', 'B', 'D', 'J', 'M'])), true), leaves)),
+      total: pack(CC.subtract(CC.union(iv(kinds(['S', 'H', 'B', 'D', 'J'])), true), leaves)),
+      mil: pack(CC.union(iv(records.filter(function (r) { return r.k === 'M'; })))),
       buzang: pack(CC.subtract(CC.union(iv(kinds(['B'])), true), leaves)),
       violence: pack(CC.union(iv(kinds(['V'])))),
       research: pack(CC.union(iv(kinds(['R'])))),
