@@ -546,7 +546,10 @@
   $('#addForm').addEventListener('submit', function (e) {
     e.preventDefault();
     var input = $('#newName'), name = input.value.trim().replace(/\s+/g, ' ');
-    if (!name) { input.focus(); return; }
+    if (!name) {                                   // 이름 없이 추가 → 미지정1, 미지정2 …
+      var used = {}; store.people.forEach(function (q) { used[q.name] = 1; });
+      for (var k = 1; k < 1000 && !name; k++) if (!used['미지정' + k]) name = '미지정' + k;
+    }
     if (store.people.length >= MAX_PEOPLE) { toast('최대 ' + MAX_PEOPLE + '명까지 저장할 수 있습니다.'); return; }
     var id = ST.nextId(store.people);
     store.people.push({ id: id, name: name.slice(0, ST.NAME_MAX), rows: blankRows(START_ROWS) });
@@ -658,7 +661,7 @@
       app: 'career-calc', version: 1, exportedAt: new Date().toISOString(), ref: store.ref || '',
       people: store.people.map(function (p) {
         var o = { name: p.name, rows: p.rows.filter(function (r) { return r.memo || r.start || r.end; }).map(function (r) { return { memo: r.memo || '', start: r.start || '', end: r.end || '', dept: r.dept || '', off: r.off ? 1 : 0 }; }) };
-        if (p.doc && p.doc.recs && p.doc.recs.length) o.doc = { name: p.doc.name || '', org: p.doc.org || '', pos: p.doc.pos || '', recs: p.doc.recs.map(function (r) { return { k: r.k, s: r.s, e: r.e || '', x: r.x ? 1 : 0, d: r.d || '' }; }) };
+        if (p.doc && p.doc.recs && p.doc.recs.length) o.doc = { name: p.doc.name || '', org: p.doc.org || '', pos: p.doc.pos || '', recs: p.doc.recs.map(function (r) { return { k: r.k, s: r.s, e: r.e || '', x: r.x ? 1 : 0, d: r.d || '', t: r.t || '' }; }) };
         return o;
       })
     };
@@ -834,7 +837,7 @@
   var CAT_MEMO = { S: '재직', H: '재직', B: '부장', D: '파견', J: '전문직' };
   function catOf(memo) {
     var m = String(memo || '').trim();
-    return /^부장/.test(m) ? 'b' : /^파견/.test(m) ? 'd' : /^전문직/.test(m) ? 'j' : /^휴직/.test(m) ? 'l' : /^재직/.test(m) ? 's' : '';
+    return /^부장/.test(m) ? 'b' : /^파견/.test(m) ? 'd' : /^전문직/.test(m) ? 'j' : /휴직|정직|직위해제/.test(m) ? 'l' : /^재직/.test(m) ? 's' : '';
   }
   /**
    * 기록(recs) → 입력창 행.
@@ -869,6 +872,14 @@
         .forEach(function (r) { if (seen.indexOf(r.d) < 0) seen.push(r.d); });
       return !seen.length ? '' : seen.length === 1 ? seen[0] : seen[0] + ' 외 ' + (seen.length - 1) + '곳';
     }
+    function leaveName(g) {
+      var seen = [];
+      use.filter(function (r) { return r.k === 'L'; })
+        .filter(function (r) { var q = toSeg(r); return q && q.s <= g.e && q.e >= g.s; })
+        .sort(function (a, b) { return a.s < b.s ? -1 : a.s > b.s ? 1 : 0; })
+        .forEach(function (r) { var t = (r.t || '').trim(); if (t && seen.indexOf(t) < 0) seen.push(t); });
+      return seen.length ? seen.join('·') : '휴직';
+    }
     function push(memo, g, open, ord, kinds, off) {
       rows.push({ memo: memo.slice(0, ST.MEMO_MAX), off: off ? 1 : 0, dept: deptFor(kinds, g), start: CC.serToIso(g.s), end: (open && g.e === ref) ? '' : CC.serToIso(g.e), _s: g.s, _o: ord });
     }
@@ -885,7 +896,7 @@
       base.forEach(function (g) { push(CAT_MEMO.S, g, openAtRef(all), 0, ['S', 'H']); });
       ['B', 'D', 'J'].forEach(function (k, i) { parts[k].segs.forEach(function (g) { push(CAT_MEMO[k], g, parts[k].open, i + 1, [k]); }); });
       // 휴직·정직·직위해제: 기본은 산입 안 함(체크 해제) — 체크하면 그 기간이 경력에 더해짐
-      CC.union(plain(segsOf(['L'])), true).forEach(function (g) { push('휴직', g, openAtRef(segsOf(['L'])), 4, ['L'], true); });
+      CC.union(plain(segsOf(['L'])), true).forEach(function (g) { push(leaveName(g), g, openAtRef(segsOf(['L'])), 4, ['L'], true); });
       rows.sort(function (a, b) { return a._o - b._o || a._s - b._s; });
     } else {
       use.forEach(function (r) {
@@ -896,7 +907,7 @@
       });
       use.forEach(function (r) {
         if (r.k !== 'L') return;
-        var g = toSeg(r); if (g) push('휴직', g, g.open, 4, ['L'], true);
+        var g = toSeg(r); if (g) push(leaveName(g), g, g.open, 4, ['L'], true);
       });
       rows.sort(function (a, b) { return a._s - b._s || a._o - b._o; });
     }
@@ -907,18 +918,18 @@
     return f(a) === f(b);
   }
   /** PDF의 재직 기록을 아래 입력창에 채움 */
-  function fillRowsFromDoc(res, target) {
+  function fillRowsFromDoc(res, target, force) {
     var out = buildRowsFromRecs(res.records, groupRows);
     if (!out.length) return 0;
     var has = target.rows.some(function (r) { return r.memo || r.start || r.end; });
-    if (has && !confirm('아래 입력창에 이미 입력한 경력이 있습니다.\nPDF의 재직 경력 ' + out.length + '줄로 바꿀까요?\n(취소하면 입력창은 그대로 두고 PDF 분석만 반영합니다)')) return 0;
+    if (has && !force && !confirm('아래 입력창에 이미 입력한 경력이 있습니다.\nPDF의 재직 경력 ' + out.length + '줄로 바꿀까요?\n(취소하면 입력창은 그대로 두고 PDF 분석만 반영합니다)')) return 0;
     target.rows = out;
     ensureRows(target);
     return out.length;
   }
 
-  function applyDoc(res, target) {
-    var filled = fillRowsFromDoc(res, target);
+  function applyDoc(res, target, force) {
+    var filled = fillRowsFromDoc(res, target, force);
     setFold(target.id, false);   // PDF 결과가 생기면 펼쳐서 보여 줌
     target.doc = { name: res.name || '', org: res.org || '', pos: res.pos || '', recs: res.records };
     selectPerson(target.id);
@@ -945,12 +956,8 @@
     if (!file) return;
     if (!/\.pdf$/i.test(file.name) && file.type !== 'application/pdf') { toast('PDF 파일을 선택해 주세요.'); return; }
     if (file.size > 25 * 1024 * 1024) { toast('파일이 너무 큽니다. (25MB 이하)'); return; }
-    var cur = current();
-    // 이미 다른 사람의 경력을 보고 있으면(내용이 있으면) 새 사람으로 입력, 빈 사람이면 그 사람에 채움
-    if (asNew === 'auto') asNew = !cur || personHasData(cur);
-    var target = asNew ? null : cur;
-    if (!asNew && !target) { asNew = true; }
-    if (asNew && store.people.length >= MAX_PEOPLE) { toast('최대 ' + MAX_PEOPLE + '명까지 저장할 수 있습니다.'); return; }
+    // PDF의 이름으로 사람을 정한다: 같은 이름이 있으면 그 사람, 없으면 새 사람(다른 사람의 데이터는 건드리지 않음)
+    var target = null, force = false;
     setDocMsg('PDF를 읽는 중…');
     Promise.all([loadPdfLib(), file.arrayBuffer()]).then(function (a) {
       return a[0].getDocument({ data: new Uint8Array(a[1]) }).promise;
@@ -960,14 +967,23 @@
     }).then(function (pages) {
       var res = PC.parsePages(pages);
       if (!res.records.length) throw new Error('empty');
+      var pn = (res.name || '').slice(0, ST.NAME_MAX);
+      var same = pn ? store.people.filter(function (p) { return p.name === pn || (p.doc && p.doc.name === pn); })[0] : null;
+      if (same && same.doc && same.doc.recs && same.doc.recs.length) {
+        if (!confirm('이미 ‘' + same.name + '’의 인사기록이 입력되어 있습니다.\n다시 불러오겠습니까?\n(‘확인’을 누르면 이 사람의 기존 PDF 결과와 입력창을 새 PDF로 바꿉니다)')) { setDocMsg(''); return; }
+        target = same; force = true;
+      } else if (same) {
+        target = same;
+      }
       if (!target) {
-        var nm = (res.name || 'PDF 인사기록').slice(0, ST.NAME_MAX);
+        if (store.people.length >= MAX_PEOPLE) { toast('최대 ' + MAX_PEOPLE + '명까지 저장할 수 있습니다.'); setDocMsg(''); return; }
+        var nm = (pn || 'PDF 인사기록');
         target = { id: ST.nextId(store.people), name: uniqueName(nm), rows: blankRows(START_ROWS) };
         store.people.push(target);
         setFold(target.id, false);
         toast('새 사람 ‘' + target.name + '’(으)로 추가했습니다.');
       }
-      applyDoc(res, target);
+      applyDoc(res, target, force);
     }).catch(function (err) {
       var n = err && err.name;
       setDocMsg(n === 'PasswordException' ? '암호가 걸린 PDF는 읽을 수 없습니다.'

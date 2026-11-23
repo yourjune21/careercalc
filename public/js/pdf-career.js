@@ -137,7 +137,13 @@
       if (t === '부' && it.x > 250 && it.x < 460) bx = it.x;
       if (t === '발' && it.x > 400) fx = it.x;
     });
+    // '임용구분' 칸: 날짜 칸과 '직급' 칸 사이
+    var gx = 232;
+    secItems.career.forEach(function (it) { if (/^직\s*급/.test(it.str.trim()) && it.x > 180 && it.x < 300) gx = it.x; });
     c.rows.forEach(function (r) {
+      var kind = r.texts.filter(function (i) { return i.x >= c.dateX + 60 && i.x < gx - 20; })
+        .sort(function (a, b) { return b.y - a.y || a.x - b.x; })
+        .map(function (i) { return i.str.trim(); }).join('').replace(/\s+/g, ' ').replace(/^\d+호\s*[:：]?\s*/, '');
       var dept = r.texts.filter(function (i) { return i.x >= bx - 45 && i.x < (bx + fx) / 2 + 20; })
         .sort(function (a, b) { return b.y - a.y || a.x - b.x; })
         .map(function (i) { return i.str.trim(); }).join('').replace(/\s+/g, ' ');
@@ -150,7 +156,7 @@
         : (DISPATCH.test(t) && !BACK.test(t)) ? 'D'
         : PRO.test(t) ? 'J'
         : (/부장/.test(t) ? 'B' : 'S');
-      records.push({ k: k, s: r.s, e: r.e, x: 0, lab: txt.replace(/\s+/g, ' ').slice(0, 60), hire: HIRE.test(t), d: dept.slice(0, 30) });
+      records.push({ k: k, s: r.s, e: r.e, x: 0, lab: txt.replace(/\s+/g, ' ').slice(0, 60), hire: HIRE.test(t), d: dept.slice(0, 30), t: kind.slice(0, 20) });
     });
 
     markFirstHire(records);

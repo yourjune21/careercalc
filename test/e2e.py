@@ -103,7 +103,11 @@ with sync_playwright() as pw:
     check('기준일 변경 즉시 재계산', [r0.locator('.res-'+k).inner_text() for k in 'ymd']==['0','2','0'], [r0.locator('.res-'+k).inner_text() for k in 'ymd'])
     pg.wait_for_timeout(600); pg.reload()
     check('기준일 유지(쿠키)', pg.input_value('#refDate')=='2026. 4. 30.', pg.input_value('#refDate'))
-    check('버전 표시', 'v1.23.0' in pg.inner_text('#verLine'), pg.inner_text('#verLine'))
+    check('버전 표시', 'v1.25.0' in pg.inner_text('#verLine'), pg.inner_text('#verLine'))
+    pg.fill('#newName',''); pg.click('#addForm button[type=submit]'); pg.wait_for_timeout(200)
+    check('이름 비우고 추가 → 미지정1', pg.locator('#personTitle').inner_text()=='미지정1', pg.locator('#personTitle').inner_text())
+    pg.click('#addForm button[type=submit]'); pg.wait_for_timeout(200)
+    check('다시 추가 → 미지정2', pg.locator('#personTitle').inner_text()=='미지정2', pg.locator('#personTitle').inner_text())
     # 인사기록 카드 접기: 이름으로 추가한 사람은 기본 접힘
     pg.fill('#newName','접힘테스트'); pg.press('#newName','Enter'); pg.wait_for_timeout(200)
     check('이름으로 시작 → 인사기록 카드 접힘', not pg.locator('#docInner').is_visible() and pg.inner_text('#btnDocFold')=='펼치기')
@@ -115,7 +119,11 @@ with sync_playwright() as pw:
     sample=os.environ.get('PDF_SAMPLE')
     if sample:
         pg.fill('#refDate','2026-11-23'); pg.press('#refDate','Tab')
-        pg.on('dialog', lambda d: d.accept())
+        dlg={'mode':'accept','msgs':[]}
+        def _dh(d):
+            dlg['msgs'].append(d.message)
+            (d.accept() if dlg['mode']=='accept' else d.dismiss())
+        pg.on('dialog', _dh)
         if False: pass
         pg.set_input_files('#pdfFile', sample)
         pg.wait_for_selector('#sumGrid .sum-card', timeout=20000)
@@ -184,23 +192,26 @@ with sync_playwright() as pw:
         pg.fill('#refDate','2025-12-31'); pg.press('#refDate','Tab')
         print('ref 2025-12-31 cards:',pg.locator('#sumGrid .sum-value').all_inner_texts())
         pg.fill('#refDate','2026-11-23'); pg.press('#refDate','Tab')
-        # 새 사람으로 추가
+        # 같은 이름의 인사기록이 이미 있으면 확인 후 다시 불러옴
         n0=pg.locator('#peopleList .person').count()
-        with pg.expect_file_chooser() as fc: pg.click('#btnPdfNew')
-        fc.value.set_files(sample)
-        pg.locator('#peopleList .person').nth(n0).wait_for(timeout=20000)
-        check('PDF로 사람 추가', pg.locator('#peopleList .person').count()==n0+1 and pg.locator('#sumGrid .sum-value').first.inner_text()=='14년 2개월 23일')
+        msgs=dlg['msgs']; del msgs[:]; dlg['mode']='dismiss'
+        pg.set_input_files('#pdfFile', sample); pg.wait_for_timeout(2500)
+        check('같은 이름 PDF → 경고창(취소 시 변화 없음)', len(msgs)==1 and '다시 불러오겠습니까' in msgs[0] and pg.locator('#peopleList .person').count()==n0, msgs)
+        dlg['mode']='accept'
+        pg.set_input_files('#pdfFile', sample); pg.locator('#docMsg', has_text='채웠습니다').wait_for(timeout=20000)
+        check('확인 시 같은 사람에 다시 불러옴(사람 수 불변)', pg.locator('#peopleList .person').count()==n0 and pg.locator('#sumGrid .sum-value').first.inner_text()=='14년 2개월 23일')
         # 새로 입력(빈 화면)
         cnt=pg.locator('#peopleList .person').count()
         pg.click('#btnBlank'); pg.wait_for_timeout(200)
         check('새로 입력 → 빈 화면', pg.locator('#empty').is_visible() and pg.locator('#editor').is_hidden() and pg.locator('#peopleList .person').count()==cnt)
         pg.fill('#newName','빈창사람'); pg.press('#newName','Enter'); pg.wait_for_timeout(200)
         check('빈 화면에서 새 사람 추가', pg.locator('#peopleList .person').count()==cnt+1 and pg.locator('#personTitle').inner_text()=='빈창사람')
-        # 빈 사람에 PDF → 그 사람에 채움 / 내용 있는 사람에 PDF → 새 사람
-        pg.set_input_files('#pdfFile', sample); pg.locator('#docMsg', has_text='채웠습니다').wait_for(timeout=20000); pg.wait_for_timeout(300)
-        check('빈 사람에 PDF → 그 사람에 채움', pg.locator('#peopleList .person').count()==cnt+1 and pg.locator('#personTitle').inner_text()=='빈창사람', (cnt, pg.locator('#peopleList .person').count(), pg.locator('#personTitle').inner_text()))
-        pg.set_input_files('#pdfFile', sample); pg.locator('#peopleList .person').nth(cnt+1).wait_for(timeout=20000)
-        check('내용 있는 사람 조회 중 PDF → 새 사람', pg.locator('#peopleList .person').count()==cnt+2 and '(2)' in pg.locator('#personTitle').inner_text() or '안영준' in pg.locator('#personTitle').inner_text(), pg.locator('#personTitle').inner_text())
+        dlg['mode']='dismiss'
+        pg.set_input_files('#pdfFile', sample); pg.wait_for_timeout(2500)
+        check('다른 이름 사람에는 PDF가 채워지지 않음', pg.locator('#personTitle').inner_text()=='빈창사람' and not pg.locator('#docBody').is_visible())
+        dlg['mode']='accept'
+        pg.set_input_files('#pdfFile', sample); pg.locator('#docMsg', has_text='채웠습니다').wait_for(timeout=20000)
+        check('PDF의 이름 사람이 선택됨', '안영준' in pg.locator('#personTitle').inner_text() and pg.locator('#peopleList .person').count()==cnt+1, pg.locator('#personTitle').inner_text())
         # 표창 검정
         check('표창 검정 기본 접힘', pg.locator('#awardBox').is_hidden())
         pg.click('#awardToggle')

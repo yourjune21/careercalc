@@ -67,7 +67,7 @@
         <span class="count" id="peopleCount">0 / 100</span>
       </div>
       <form id="addForm" class="add-form" autocomplete="off">
-        <input id="newName" type="text" maxlength="20" placeholder="이름 입력 (예: 홍길동)" aria-label="새 사람 이름">
+        <input id="newName" type="text" maxlength="20" placeholder="이름 입력 (비우면 미지정1…)" aria-label="새 사람 이름">
         <button type="submit" class="btn primary">추가</button>
       </form>
       <div class="people-actions">
@@ -118,7 +118,7 @@
             </div>
           </div>
           <div id="docInner">
-          <div id="docDrop" class="drop">PDF 파일을 여기에 끌어다 놓거나 <b>PDF 불러오기</b>를 누르세요<br><span class="muted small">이미 입력된 사람이 있으면 <b>새 사람으로 추가</b>됩니다.</span><br><span class="need">인사기록카드(전체) 파일을 첨부하십시오.</span></div>
+          <div id="docDrop" class="drop">PDF 파일을 여기에 끌어다 놓거나 <b>PDF 불러오기</b>를 누르세요<br><span class="muted small">PDF의 <b>이름</b>으로 사람별 보관함에 <b>새로 추가</b>됩니다. (같은 이름이 이미 있으면 확인 후 다시 불러옵니다)</span><br><span class="need">인사기록카드(전체) 파일을 첨부하십시오.</span></div>
           <div id="docBody" hidden>
             <div class="doc-who" id="docWho" hidden></div>
             <label class="mil-box" id="milBox" hidden><input type="checkbox" id="milChk"> <b>군 경력 추가</b> <span class="muted small" id="milInfo"></span> <span class="muted small">— 체크하면 총경력에 더하고, 해제하면 뺍니다</span></label>

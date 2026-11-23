@@ -61,7 +61,7 @@
       if (CC.isoToSer(r.s) == null) return;
       var e = r.e || '';
       if (e && CC.isoToSer(e) == null) return;
-      var rc = { k: r.k, s: r.s, e: e, x: r.x ? 1 : 0 }; if (r.d) rc.d = String(r.d).replace(/[\u0000-\u001f]/g, '').slice(0, 30); recs.push(rc);
+      var rc = { k: r.k, s: r.s, e: e, x: r.x ? 1 : 0 }; if (r.d) rc.d = String(r.d).replace(/[\u0000-\u001f]/g, '').slice(0, 30); if (r.t) rc.t = String(r.t).replace(/[\u0000-\u001f]/g, '').slice(0, 20); recs.push(rc);
     });
     if (!recs.length) return null;
     var out = { recs: recs };
@@ -237,7 +237,7 @@
           ref: state.ref || '',
           people: state.people.map(function (p) {
             var o = { id: p.id, name: p.name, rows: p.rows.map(function (r) { return { memo: r.memo || '', start: r.start || '', end: r.end || '', dept: r.dept || '', off: r.off ? 1 : 0 }; }) };
-            if (p.doc && p.doc.recs && p.doc.recs.length) o.doc = { name: p.doc.name || '', org: p.doc.org || '', pos: p.doc.pos || '', recs: p.doc.recs.map(function (r) { return { k: r.k, s: r.s, e: r.e || '', x: r.x ? 1 : 0, d: r.d || '' }; }) };
+            if (p.doc && p.doc.recs && p.doc.recs.length) o.doc = { name: p.doc.name || '', org: p.doc.org || '', pos: p.doc.pos || '', recs: p.doc.recs.map(function (r) { return { k: r.k, s: r.s, e: r.e || '', x: r.x ? 1 : 0, d: r.d || '', t: r.t || '' }; }) };
             return o;
           })
         };
