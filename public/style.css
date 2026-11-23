@@ -653,3 +653,5 @@ h2 .badge { font-size: 12px; margin-left: 6px; }
   .tiny .ps-warn { font-size: 9px; padding: 4px 10px; margin-top: 6px; } .tiny .ps-foot { margin-top: 4px; }
   .tiny .ps-stats { gap: 6px; } .tiny .ps-sec { margin: 6px 0 3px; }
 }
+.opt-row{display:flex;align-items:center;gap:8px;padding:6px 2px;font-weight:600;cursor:pointer}
+@media print{.opt-row{display:none}}

@@ -23,6 +23,10 @@
 <div class="set-back" id="setBack" hidden>
   <section class="set-modal" role="dialog" aria-modal="true" aria-labelledby="setTitle">
     <div class="set-head"><h2 id="setTitle">설정</h2><button type="button" class="btn ghost" id="setClose" aria-label="닫기">닫기</button></div>
+    <h3 class="set-sub">기본 경력 포함 설정</h3>
+    <p class="muted small">인사기록 PDF를 불러올 때 아래 경력을 처음부터 <b>체크(총경력에 포함)</b>한 상태로 채웁니다. 바꾸면 이미 저장된 사람들의 해당 줄(군 경력, 육아휴직)에도 바로 적용됩니다. (질병휴직·정직·직위해제는 항상 체크 해제로 시작)</p>
+    <label class="opt-row"><input type="checkbox" id="optChild"> 육아휴직을 기본 경력에 포함</label>
+    <label class="opt-row"><input type="checkbox" id="optMil"> 군 경력을 기본 경력에 포함</label>
     <h3 class="set-sub">출력 순서 설정</h3>
     <p class="muted small">항목을 끌어서 순서를 바꾸세요. 경력 카드, PDF 요약 표, 결과 복사, 한 장 인쇄에 모두 적용됩니다. (▲▼ 버튼으로도 옮길 수 있습니다)</p>
     <ol class="ord-list" id="ordList"></ol>

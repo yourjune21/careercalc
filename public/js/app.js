@@ -1028,6 +1028,13 @@
   }
 
   /* ---- 출력 순서 설정 (카드·요약표·결과 복사·한 장 인쇄 공통) ---- */
+  /* ---- 기본 포함 설정: 육아휴직·군 경력을 입력창에서 처음부터 체크(산입)할지 ---- */
+  var OPT_KEY = 'careerCalc.opts';
+  var OPT = { child: 0, mil: 0 };
+  try { var _o = JSON.parse(localStorage.getItem(OPT_KEY) || '{}') || {}; OPT.child = _o.child ? 1 : 0; OPT.mil = _o.mil ? 1 : 0; } catch (e) { /* noop */ }
+  function saveOpt() { try { localStorage.setItem(OPT_KEY, JSON.stringify(OPT)); } catch (e) { /* noop */ } }
+  function isChildLeaveMemo(memo) { var t = String(memo || '').split('·'); return t.length > 0 && t.every(function (x) { return /육아/.test(x); }); }
+
   var SORT_KEY = 'careerCalc.order';
   var SORT_DEF = [['t', '총경력'], ['a', '실재직 경력'], ['b', '부장 경력'], ['r', '연구학교 경력'], ['v', '학교폭력 예방기여 경력'], ['d', '파견 경력'], ['j', '전문직 경력'], ['l', '휴직 경력'], ['m', '군 경력']];
   function sortLabel(id) { for (var i = 0; i < SORT_DEF.length; i++) if (SORT_DEF[i][0] === id) return SORT_DEF[i][1]; return id; }
@@ -1075,6 +1082,22 @@
     $('#setClose').addEventListener('click', close);
     back.addEventListener('click', function (e) { if (e.target === back) close(); });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !back.hidden) close(); });
+  })();
+  /* 설정 창: 기본 포함 옵션 */
+  (function () {
+    var c = $('#optChild'), m = $('#optMil');
+    c.checked = !!OPT.child; m.checked = !!OPT.mil;
+    function apply() {
+      OPT.child = c.checked ? 1 : 0; OPT.mil = m.checked ? 1 : 0; saveOpt();
+      store.people.forEach(function (p) {
+        (p.rows || []).forEach(function (r) {
+          if (r.memo === '군 경력') r.off = OPT.mil ? 0 : 1;
+          else if (isChildLeaveMemo(r.memo) && /육아/.test(r.memo)) r.off = OPT.child ? 0 : 1;
+        });
+      });
+      renderRows(); updateResults(); scheduleSave();
+    }
+    c.addEventListener('change', apply); m.addEventListener('change', apply);
   })();
   var FOLD_KEY = 'careerCalc.docFold';
   function loadFold() { try { return JSON.parse(localStorage.getItem(FOLD_KEY) || '{}') || {}; } catch (e) { return {}; } }
@@ -1263,6 +1286,11 @@
         .forEach(function (r) { var t = (r.t || '').trim(); if (t && seen.indexOf(t) < 0) seen.push(t); });
       return seen.length ? seen.join('·') : '휴직';
     }
+    function leaveIsChild(g) {
+      var ts = use.filter(function (r) { return r.k === 'L'; })
+        .filter(function (r) { var q = toSeg(r); return q && q.s <= g.e && q.e >= g.s; }).map(function (r) { return (r.t || '').trim(); }).filter(Boolean);
+      return ts.length > 0 && ts.every(function (t) { return /육아/.test(t); });
+    }
     function push(memo, g, open, ord, kinds, off) {
       rows.push({ memo: memo.slice(0, ST.MEMO_MAX), off: off ? 1 : 0, dept: deptFor(kinds, g), start: CC.serToIso(g.s), end: (open && g.e === ref) ? '' : CC.serToIso(g.e), _s: g.s, _o: ord });
     }
@@ -1270,7 +1298,7 @@
     function milRowsInto(list) {
       var ms = [];
       recs.forEach(function (r) { if (r.k === 'M') { var g = toSeg(r); if (g) ms.push({ s: g.s, e: g.e }); } });
-      CC.union(ms, true).forEach(function (g) { list.push({ memo: '군 경력', off: 1, dept: '', start: CC.serToIso(g.s), end: CC.serToIso(g.e), _s: g.s, _o: 5 }); });
+      CC.union(ms, true).forEach(function (g) { list.push({ memo: '군 경력', off: OPT.mil ? 0 : 1, dept: '', start: CC.serToIso(g.s), end: CC.serToIso(g.e), _s: g.s, _o: 5 }); });
     }
     if (grouped) {
       var all = segsOf(['S', 'H', 'B', 'D', 'J']);
@@ -1286,7 +1314,7 @@
       // 군 경력: 한 줄(맞닿은 기간 합침), 기본은 산입 안 함
       milRowsInto(rows);
       // 휴직·정직·직위해제: 기본은 산입 안 함(체크 해제) — 체크하면 그 기간이 경력에 더해짐
-      CC.union(plain(segsOf(['L'])), true).forEach(function (g) { push(leaveName(g), g, openAtRef(segsOf(['L'])), 4, ['L'], true); });
+      CC.union(plain(segsOf(['L'])), true).forEach(function (g) { push(leaveName(g), g, openAtRef(segsOf(['L'])), 4, ['L'], !(OPT.child && leaveIsChild(g))); });
       rows.sort(function (a, b) { return a._o - b._o || a._s - b._s; });
     } else {
       use.forEach(function (r) {
@@ -1298,7 +1326,7 @@
       milRowsInto(rows);
       use.forEach(function (r) {
         if (r.k !== 'L') return;
-        var g = toSeg(r); if (g) push(leaveName(g), g, g.open, 4, ['L'], true);
+        var g = toSeg(r); if (g) push(leaveName(g), g, g.open, 4, ['L'], !(OPT.child && leaveIsChild(g)));
       });
       rows.sort(function (a, b) { return a._s - b._s || a._o - b._o; });
     }
