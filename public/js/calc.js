@@ -116,8 +116,9 @@
    * 겹치는 기간을 하나로 합침 (중복 제외 합산용).
    * 하루라도 겹치는 기간만 합치고, 맞닿기만 한 기간(종료일 다음날 시작)은 따로 둡니다.
    * 그래서 중복이 없으면 '포함 합산'과 '제외 합산'이 항상 같습니다.
+   * touch=true 이면 맞닿은 기간(종료일 다음날이 시작일)도 이어 붙입니다.
    */
-  function union(rows) {
+  function union(rows, touch) {
     var v = [];
     for (var i = 0; i < rows.length; i++) {
       var r = rows[i];
@@ -127,8 +128,24 @@
     var out = [];
     v.forEach(function (r) {
       var last = out[out.length - 1];
-      if (last && r.s <= last.e) { if (r.e > last.e) last.e = r.e; }
+      if (last && r.s <= last.e + (touch ? 1 : 0)) { if (r.e > last.e) last.e = r.e; }
       else out.push(r);
+    });
+    return out;
+  }
+
+  /** a 기간들에서 b 기간들을 뺌 (둘 다 union()을 거친 정렬·비중첩 목록) */
+  function subtract(a, b) {
+    var out = [];
+    a.forEach(function (x) {
+      var cur = x.s;
+      for (var i = 0; i < b.length && cur <= x.e; i++) {
+        var y = b[i];
+        if (y.e < cur || y.s > x.e) continue;
+        if (y.s > cur) out.push({ s: cur, e: y.s - 1 });
+        cur = y.e + 1;
+      }
+      if (cur <= x.e) out.push({ s: cur, e: x.e });
     });
     return out;
   }
@@ -188,7 +205,7 @@
   function lastDayOfMonth(y, m) { return parts(eomonth(y, m, 0)).d; }
 
   return {
-    diff: diff, sum: sum, overlap: overlap, findOverlaps: findOverlaps, union: union, recognize: recognize,
+    diff: diff, sum: sum, overlap: overlap, findOverlaps: findOverlaps, union: union, subtract: subtract, recognize: recognize,
     isoToSer: isoToSer, serToIso: serToIso, parseDate: parseDate,
     fmtSer: fmtSer, fmtIso: fmtIso, fmtDur: fmtDur, lastDayOfMonth: lastDayOfMonth
   };

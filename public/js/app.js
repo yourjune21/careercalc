@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  var CC = window.CareerCalc, ST = window.CareerStorage;
+  var CC = window.CareerCalc, ST = window.CareerStorage, PC = window.PdfCareer;
   var MAX_PEOPLE = ST.MAX_PEOPLE, MAX_ROWS = ST.MAX_ROWS;
   var START_ROWS = 5;
 
@@ -132,6 +132,7 @@
 
   function selectPerson(id) {
     store.selected = id;
+    setDocMsg('');
     scheduleSave();
     renderAll();
   }
@@ -207,6 +208,7 @@
 
     renderWarnings(p, a);
     renderTotal(p, a);
+    renderDoc(p);
     renderPeople();
   }
 
@@ -425,6 +427,13 @@
     a.overlaps.forEach(function (o) {
       lines.push('경고) ' + (o.i + 1) + '번↔' + (o.j + 1) + '번 ' + CC.fmtSer(o.s) + '~' + CC.fmtSer(o.e) + ' (' + CC.fmtDur(o.dur) + ' 중복)');
     });
+    if (p.doc && p.doc.recs && p.doc.recs.length) {
+      var c = PC.compute(p.doc.recs, effRef(), CC);
+      lines.push('인사기록 PDF 기준 (기준일 ' + CC.fmtIso(effRef()) + ')');
+      [['total', '총경력'], ['buzang', '부장 경력'], ['violence', '학교폭력 경력']].forEach(function (d) {
+        lines.push(d[1] + ': ' + fmtTotal(c[d[0]].sum) + ' (인정 ' + fmtRecog(c[d[0]].rec) + ')');
+      });
+    }
     return lines.join('\n');
   }
   $('#btnCopy').addEventListener('click', function () {
@@ -470,7 +479,9 @@
     var data = {
       app: 'career-calc', version: 1, exportedAt: new Date().toISOString(), ref: store.ref || '',
       people: store.people.map(function (p) {
-        return { name: p.name, rows: p.rows.filter(function (r) { return r.memo || r.start || r.end; }).map(function (r) { return { memo: r.memo || '', start: r.start || '', end: r.end || '' }; }) };
+        var o = { name: p.name, rows: p.rows.filter(function (r) { return r.memo || r.start || r.end; }).map(function (r) { return { memo: r.memo || '', start: r.start || '', end: r.end || '' }; }) };
+        if (p.doc && p.doc.recs && p.doc.recs.length) o.doc = { recs: p.doc.recs.map(function (r) { return { k: r.k, s: r.s, e: r.e || '', x: r.x ? 1 : 0 }; }) };
+        return o;
       })
     };
     var d = new Date(), pad = function (n) { return (n < 10 ? '0' : '') + n; };
@@ -500,6 +511,7 @@
             };
           });
           var np = { id: ST.nextId(store.people), name: p.name.trim().slice(0, ST.NAME_MAX) || '(이름 없음)', rows: rows };
+          var dc = ST.cleanDoc(p.doc); if (dc) np.doc = dc;
           ensureRows(np);
           store.people.push(np); added++;
         });
@@ -522,6 +534,147 @@
     renderAll();
     toast('모두 삭제했습니다.');
   });
+
+  /* ---------- 인사기록 PDF ---------- */
+  var KIND = { S: '재직', B: '재직·부장', L: '휴직 등(차감)', V: '학교폭력' };
+  var pdfMode = 'current', pdfLib = null;
+
+  function setDocMsg(t) { $('#docMsg').textContent = t || ''; }
+
+  function loadPdfLib() {
+    if (pdfLib) return Promise.resolve(pdfLib);
+    return import('./vendor/pdf.min.mjs').then(function (m) {
+      m.GlobalWorkerOptions.workerSrc = new URL('js/vendor/pdf.worker.min.mjs', document.baseURI).href;
+      pdfLib = m; return m;
+    });
+  }
+
+  function recLen(r) {
+    var ref = CC.isoToSer(effRef()), s = CC.isoToSer(r.s), e = r.e ? CC.isoToSer(r.e) : ref, note = '';
+    if (s == null || e == null) return '';
+    if (!r.e) note = ' (기준일까지)';
+    if (ref != null && e > ref) { e = ref; note = ' (기준일까지)'; }
+    if (e < s) return '기준일 이후 — 제외';
+    return CC.fmtDur(CC.diff(s, e)) + note;
+  }
+
+  function renderDoc(p) {
+    var recs = p.doc && p.doc.recs && p.doc.recs.length ? p.doc.recs : null;
+    $('#docDrop').hidden = !!recs;
+    $('#docBody').hidden = !recs;
+    $('#btnDocClear').hidden = !recs;
+    $('#btnPdf').textContent = recs ? 'PDF 다시 불러오기' : 'PDF 불러오기';
+    if (!recs) return;
+
+    var c = PC.compute(recs, effRef(), CC);
+    var grid = $('#sumGrid'); grid.textContent = '';
+    [['total', '총경력', 't', '재직 기간에서 휴직 등을 뺀 기간'], ['buzang', '부장 경력', 'b', '부장교사·부장담임 보직 기간'], ['violence', '학교폭력 경력', 'v', '학교폭력예방및기여 가산점 기간']].forEach(function (d) {
+      var r = c[d[0]];
+      var ul = h('ul');
+      r.segs.forEach(function (g, i) { ul.appendChild(h('li', { text: CC.fmtSer(g.s) + '~' + CC.fmtSer(g.e) + ' (' + CC.fmtDur(r.durs[i]) + ')' })); });
+      grid.appendChild(h('div', { class: 'sum-card ' + d[2] },
+        h('div', { class: 'sum-label', text: d[1] }),
+        h('div', { class: 'sum-value', text: fmtTotal(r.sum) }),
+        h('div', { class: 'sum-rec' }, '인정 경력 ', h('b', { text: fmtRecog(r.rec) })),
+        h('div', { class: 'sum-rec', text: d[3] }),
+        r.segs.length ? h('details', { class: 'sum-seg' }, h('summary', { text: '기간 ' + r.segs.length + '구간 보기' }), ul) : h('div', { class: 'sum-seg', text: '해당 기록 없음' })));
+    });
+    $('#docNote').textContent = '기준일 ' + CC.fmtIso(effRef()) + '까지 계산 · 기준일을 바꾸면 자동으로 다시 계산됩니다 · 인정 경력은 15일 이상이면 1개월 올림';
+
+    var order = { S: 0, B: 0, L: 1, V: 2 };
+    var idx = recs.map(function (r, i) { return i; }).sort(function (a, b) {
+      var A = recs[a], B = recs[b];
+      return order[A.k] - order[B.k] || (A.s < B.s ? 1 : A.s > B.s ? -1 : 0);
+    });
+    var body = $('#recBody'); body.textContent = '';
+    idx.forEach(function (i) {
+      var r = recs[i];
+      body.appendChild(h('tr', { class: r.x ? 'off' : null, 'data-i': i },
+        h('td', null, h('input', { type: 'checkbox', checked: r.x ? null : true, 'aria-label': (KIND[r.k] || r.k) + ' ' + r.s + ' 반영' })),
+        h('td', null, h('span', { class: 'kind ' + r.k, text: KIND[r.k] || r.k })),
+        h('td', { text: CC.fmtIso(r.s) + ' ~ ' + (r.e ? CC.fmtIso(r.e) : '(현재)') }),
+        h('td', { text: recLen(r) }),
+        h('td', { class: 'lab', text: r.lab || '' })));
+    });
+  }
+
+  $('#recBody').addEventListener('change', function (e) {
+    var tr = e.target.closest('tr'), p = current();
+    if (!tr || !p || !p.doc) return;
+    p.doc.recs[+tr.dataset.i].x = e.target.checked ? 0 : 1;
+    updateResults(); scheduleSave();
+  });
+
+  function applyDoc(res, target) {
+    target.doc = { recs: res.records };
+    selectPerson(target.id);
+    var msg = 'PDF에서 경력 ' + res.records.length + '건을 읽었습니다.';
+    if (res.warnings.length) msg += ' ' + res.warnings.join(' ');
+    setDocMsg(msg);
+    toast('인사기록을 불러왔습니다.');
+  }
+
+  function importPdf(file, asNew) {
+    if (!file) return;
+    if (!/\.pdf$/i.test(file.name) && file.type !== 'application/pdf') { toast('PDF 파일을 선택해 주세요.'); return; }
+    if (file.size > 25 * 1024 * 1024) { toast('파일이 너무 큽니다. (25MB 이하)'); return; }
+    var target = asNew ? null : current();
+    if (!asNew && !target) { asNew = true; }
+    if (asNew && store.people.length >= MAX_PEOPLE) { toast('최대 ' + MAX_PEOPLE + '명까지 저장할 수 있습니다.'); return; }
+    setDocMsg('PDF를 읽는 중…');
+    Promise.all([loadPdfLib(), file.arrayBuffer()]).then(function (a) {
+      return a[0].getDocument({ data: new Uint8Array(a[1]) }).promise;
+    }).then(function (pdf) {
+      if (pdf.numPages > 100) throw new Error('pages');
+      return PC.readPages(pdf);
+    }).then(function (pages) {
+      var res = PC.parsePages(pages);
+      if (!res.records.length) throw new Error('empty');
+      if (!target) {
+        var nm = (res.name || 'PDF 인사기록').slice(0, ST.NAME_MAX);
+        target = store.people.filter(function (p) { return p.name === nm; })[0];
+        if (!target) {
+          target = { id: ST.nextId(store.people), name: nm, rows: blankRows(START_ROWS) };
+          store.people.push(target);
+        }
+      }
+      applyDoc(res, target);
+    }).catch(function (err) {
+      var n = err && err.name;
+      setDocMsg(n === 'PasswordException' ? '암호가 걸린 PDF는 읽을 수 없습니다.'
+        : (err && err.message === 'empty') ? '경력 표를 찾지 못했습니다. 인사카드(개인인사기록) PDF가 맞는지, 스캔 이미지가 아닌 PDF인지 확인해 주세요.'
+        : (err && err.message === 'pages') ? '쪽수가 너무 많습니다. 인사카드 PDF만 올려 주세요.'
+        : 'PDF를 읽지 못했습니다. 다른 파일이거나 손상된 파일일 수 있습니다.');
+    });
+  }
+
+  $('#btnPdf').addEventListener('click', function () { pdfMode = 'current'; $('#pdfFile').click(); });
+  $('#btnPdfNew').addEventListener('click', function () { pdfMode = 'new'; $('#pdfFile').click(); });
+  $('#pdfFile').addEventListener('change', function (e) {
+    var f = e.target.files[0]; e.target.value = '';
+    importPdf(f, pdfMode === 'new');
+  });
+  $('#btnDocClear').addEventListener('click', function () {
+    var p = current();
+    if (!p || !confirm('‘' + p.name + '’의 PDF 분석 결과를 지울까요?')) return;
+    p.doc = null; setDocMsg('');
+    updateResults(); scheduleSave();
+  });
+
+  function dropTarget(el, asNew) {
+    el.addEventListener('dragover', function (e) { e.preventDefault(); el.classList.add('over'); });
+    el.addEventListener('dragleave', function () { el.classList.remove('over'); });
+    el.addEventListener('drop', function (e) {
+      e.preventDefault(); el.classList.remove('over');
+      var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      importPdf(f, asNew);
+    });
+  }
+  dropTarget($('#docCard'), false);
+  dropTarget($('.people'), true);
+  // 파일을 카드 밖에 놓았을 때 브라우저가 PDF를 열어 버리지 않도록
+  window.addEventListener('dragover', function (e) { e.preventDefault(); });
+  window.addEventListener('drop', function (e) { e.preventDefault(); });
 
   /* ---------- 경력 산정 기준일 ---------- */
   var refIn = $('#refDate'), refPicker = $('#refPicker');

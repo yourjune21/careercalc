@@ -45,6 +45,7 @@
         <input id="newName" type="text" maxlength="20" placeholder="이름 입력 (예: 홍길동)" aria-label="새 사람 이름">
         <button type="submit" class="btn primary">추가</button>
       </form>
+      <button type="button" class="btn pdf-new" id="btnPdfNew">PDF로 사람 추가</button>
       <input id="peopleSearch" class="search" type="search" placeholder="이름 검색" aria-label="이름 검색" hidden>
       <ul id="peopleList" class="people-list"></ul>
     </aside>
@@ -56,6 +57,31 @@
       </div>
 
       <div id="editor" hidden>
+        <div class="card doc" id="docCard">
+          <div class="doc-head">
+            <div>
+              <h3>인사기록 PDF로 한눈에 보기</h3>
+              <p class="muted small">인사카드(개인인사기록) PDF를 올리면 <b>총경력 · 부장 경력 · 학교폭력 경력</b>을 자동으로 계산합니다. 파일은 이 브라우저 안에서만 읽고 서버로 보내지 않으며, 경력 기간(날짜)만 저장합니다.</p>
+            </div>
+            <div class="head-actions">
+              <button type="button" class="btn primary" id="btnPdf">PDF 불러오기</button>
+              <button type="button" class="btn ghost" id="btnDocClear" hidden>결과 지우기</button>
+            </div>
+          </div>
+          <div id="docDrop" class="drop">PDF 파일을 여기에 끌어다 놓거나 <b>PDF 불러오기</b>를 누르세요</div>
+          <div id="docBody" hidden>
+            <div class="sum-grid" id="sumGrid"></div>
+            <p class="muted small" id="docNote"></p>
+            <details class="rec-detail" id="recDetail">
+              <summary>인식된 기록 보기 · 반영 여부 수정</summary>
+              <p class="muted small">체크를 끄면 그 기록은 계산에서 빠집니다. ‘휴직 등’은 총경력·부장 경력에서 <b>빼는</b> 기간이며, 체크를 끄면 근무한 것으로 봅니다.</p>
+              <div class="table-wrap"><table class="rows rec-table"><thead><tr><th>반영</th><th>구분</th><th>기간</th><th>길이</th><th>원문 일부</th></tr></thead><tbody id="recBody"></tbody></table></div>
+            </details>
+          </div>
+          <p class="muted small doc-msg" id="docMsg" role="status" aria-live="polite"></p>
+        </div>
+        <input type="file" id="pdfFile" accept="application/pdf,.pdf" hidden>
+
         <div class="card">
           <div class="work-head">
             <div>
@@ -173,6 +199,7 @@
   <script src="js/version.js"></script>
   <script src="js/calc.js"></script>
   <script src="js/storage.js"></script>
+  <script src="js/pdf-career.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

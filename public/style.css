@@ -244,3 +244,34 @@ table.rows { width: 100%; border-collapse: collapse; min-width: 800px; }
 .changelog li { margin: 2px 0; }
 @media (max-width: 860px) { .refwrap { padding: 0 12px; } }
 @media print { #btnRefToday, .changelog { display: none !important; } .refbar { background: transparent; padding: 0 0 6px; } .refwrap { padding: 0; margin: 0; } }
+
+/* 인사기록 PDF */
+.pdf-new { width: 100%; margin-top: 8px; }
+.doc-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.doc-head h3 { font-size: 16px; margin-bottom: 4px; }
+.drop {
+  margin-top: 12px; padding: 22px 12px; text-align: center; color: var(--muted);
+  border: 2px dashed #cfc9b9; border-radius: 10px; background: #faf8f2;
+}
+.drop.over, .people.over { border-color: var(--accent); background: var(--accent-soft); }
+.sum-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 14px; }
+.sum-card { border: 1px solid var(--line); border-left: 5px solid var(--c, var(--accent)); border-radius: 10px; padding: 12px 14px; background: #fff; }
+.sum-card.t { --c: #0f5c5c; } .sum-card.b { --c: #6a4fb3; } .sum-card.v { --c: #1d6fa5; }
+.sum-label { font-size: 13px; font-weight: 700; color: var(--c); }
+.sum-value { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.3; margin: 2px 0; }
+.sum-rec { font-size: 13px; color: var(--muted); }
+.sum-rec b { color: var(--ink); }
+.sum-seg { margin-top: 6px; font-size: 12.5px; color: var(--muted); }
+.sum-seg summary { cursor: pointer; }
+.sum-seg ul { margin: 4px 0 0; padding-left: 16px; }
+.rec-detail { margin-top: 10px; }
+.rec-detail summary { cursor: pointer; font-weight: 600; font-size: 14px; }
+.rec-table { min-width: 560px; }
+.rec-table td { vertical-align: middle; font-size: 13px; }
+.rec-table tr.off td { color: #a39d8c; text-decoration: line-through; }
+.rec-table .lab { color: var(--muted); font-size: 12px; max-width: 260px; }
+.kind { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: #f1eee4; }
+.kind.B { background: #ece6fa; color: #4d3a8f; } .kind.L { background: var(--warn-bg); color: var(--warn); } .kind.V { background: #e0eef8; color: #14527d; } .kind.S { background: #e6f4ec; color: var(--ok); }
+.doc-msg:empty { display: none; }
+@media (max-width: 860px) { .sum-grid { grid-template-columns: 1fr; } .doc-head { flex-direction: column; } }
+@media print { .drop, #btnPdfNew, .rec-detail { display: none !important; } .sum-grid { grid-template-columns: repeat(3, 1fr); } }

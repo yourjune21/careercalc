@@ -40,6 +40,31 @@
     return CC.isoToSer(iso) == null ? '' : iso;
   }
 
+  function packRec(r) {
+    return r.k + r.s.replace(/-/g, '') + (r.e ? r.e.replace(/-/g, '') : '00000000') + (r.x ? '!' : '');
+  }
+  function unpackRec(t) {
+    var m = /^([SBLV])(\d{8})(\d{8})(!?)$/.exec(t);
+    if (!m) return null;
+    var s = isoFrom8(m[2]);
+    var e = m[3] === '00000000' ? '' : isoFrom8(m[3]);
+    if (!s || (m[3] !== '00000000' && !e)) return null;
+    return { k: m[1], s: s, e: e, x: m[4] ? 1 : 0 };
+  }
+  /** 인사기록 PDF 결과 정리 ({recs}) — 잘못된 값은 버림 */
+  function cleanDoc(doc) {
+    if (!doc || !Array.isArray(doc.recs)) return null;
+    var recs = [];
+    doc.recs.slice(0, 120).forEach(function (r) {
+      if (!r || 'SBLV'.indexOf(r.k) < 0 || r.k.length !== 1) return;
+      if (CC.isoToSer(r.s) == null) return;
+      var e = r.e || '';
+      if (e && CC.isoToSer(e) == null) return;
+      recs.push({ k: r.k, s: r.s, e: e, x: r.x ? 1 : 0 });
+    });
+    return recs.length ? { recs: recs } : null;
+  }
+
   function packPerson(p) {
     var rows = p.rows.slice();
     while (rows.length && !rows[rows.length - 1].memo && !rows[rows.length - 1].start && !rows[rows.length - 1].end) rows.pop();
@@ -47,17 +72,25 @@
     rows.forEach(function (r) {
       out.push(enc(r.memo || '') + '*' + (r.start || '').replace(/-/g, '') + '*' + (r.end || '').replace(/-/g, ''));
     });
+    if (p.doc && p.doc.recs && p.doc.recs.length) out.push('#' + p.doc.recs.map(packRec).join('.'));
     return out.join('~');
   }
 
   function unpackPerson(id, val) {
     var parts = String(val).split('~');
-    var rows = [];
-    for (var k = 1; k < parts.length && rows.length < MAX_ROWS; k++) {
+    var rows = [], doc = null;
+    for (var k = 1; k < parts.length; k++) {
+      if (parts[k].charAt(0) === '#') {
+        doc = cleanDoc({ recs: parts[k].slice(1).split('.').map(unpackRec).filter(Boolean) });
+        continue;
+      }
+      if (rows.length >= MAX_ROWS) continue;
       var f = parts[k].split('*');
       rows.push({ memo: dec(f[0] || '').slice(0, MEMO_MAX), start: isoFrom8(f[1]), end: isoFrom8(f[2]) });
     }
-    return { id: id, name: dec(parts[0] || '').slice(0, NAME_MAX) || '(이름 없음)', rows: rows };
+    var p = { id: id, name: dec(parts[0] || '').slice(0, NAME_MAX) || '(이름 없음)', rows: rows };
+    if (doc) p.doc = doc;
+    return p;
   }
 
   /* ---------- 쿠키 입출력 ---------- */
@@ -166,7 +199,7 @@
         d.people.forEach(function (p) {
           if (!p || !p.id || seen[p.id] || people.length >= MAX_PEOPLE) return;
           seen[p.id] = true;
-          people.push({
+          var np = {
             id: p.id,
             name: String(p.name || '(이름 없음)').slice(0, NAME_MAX),
             rows: (Array.isArray(p.rows) ? p.rows : []).slice(0, MAX_ROWS).map(function (r) {
@@ -176,7 +209,9 @@
                 end: CC.isoToSer(r && r.end) == null ? '' : r.end
               };
             })
-          });
+          };
+          var dc = cleanDoc(p.doc); if (dc) np.doc = dc;
+          people.push(np);
         });
         return { people: people, selected: seen[d.selected] ? d.selected : 0, ref: CC.isoToSer(d.ref) == null ? '' : d.ref };
       } catch (e) { return { people: [], selected: 0, ref: '' }; }
@@ -187,7 +222,9 @@
           selected: state.selected || 0,
           ref: state.ref || '',
           people: state.people.map(function (p) {
-            return { id: p.id, name: p.name, rows: p.rows.map(function (r) { return { memo: r.memo || '', start: r.start || '', end: r.end || '' }; }) };
+            var o = { id: p.id, name: p.name, rows: p.rows.map(function (r) { return { memo: r.memo || '', start: r.start || '', end: r.end || '' }; }) };
+            if (p.doc && p.doc.recs && p.doc.recs.length) o.doc = { recs: p.doc.recs.map(function (r) { return { k: r.k, s: r.s, e: r.e || '', x: r.x ? 1 : 0 }; }) };
+            return o;
           })
         };
         root.localStorage.setItem(LS_KEY, JSON.stringify(slim));
@@ -244,7 +281,7 @@
 
   root.CareerStorage = {
     MAX_PEOPLE: MAX_PEOPLE, MAX_ROWS: MAX_ROWS, NAME_MAX: NAME_MAX, MEMO_MAX: MEMO_MAX,
-    init: init, save: save, switchMode: switchMode, wipeAll: wipeAll, measure: measure, nextId: nextId,
+    init: init, save: save, switchMode: switchMode, wipeAll: wipeAll, measure: measure, nextId: nextId, cleanDoc: cleanDoc,
     _pack: packPerson, _unpack: unpackPerson
   };
 })(typeof self !== 'undefined' ? self : this);
