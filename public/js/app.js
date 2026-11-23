@@ -597,7 +597,7 @@
       lines.push('인사기록 PDF 기준 (기준일 ' + CC.fmtIso(effRef()) + ')');
       var who = [p.doc.name, p.doc.org, p.doc.pos].filter(Boolean).join(' · ');
       if (who) lines.push(who);
-      [['total', '총경력(체크한 줄 모두 포함)'], ['actual', '실재직 경력(휴직·군 경력 제외)'], ['buzang', '부장 경력'], ['research', '연구학교 경력'], ['violence', '학교폭력 예방기여 경력'], ['mil', '군 경력'], ['dispatch', '파견 경력'], ['leave', '휴직 경력'], ['pro', '전문직 경력']].filter(function (d) { return (d[0] !== 'pro' || c.pro.segs.length) && (d[0] !== 'mil' || hasMil); }).forEach(function (d) {
+      [['total', '총경력(체크한 줄 모두 포함)'], ['actual', '실재직 경력(휴직·군 경력 제외)'], ['buzang', '부장 경력'], ['research', '연구학교 경력'], ['violence', '학교폭력 예방기여 경력'], ['mil', '군 경력'], ['dispatch', '파견 경력'], ['leave', '휴직 경력'], ['pro', '전문직 경력']].filter(function (d) { return (d[0] !== 'pro' || c.pro.segs.length) && (d[0] !== 'mil' || hasMil); }).sort(function (x, y) { var o = getOrder(), cl = { total: 't', actual: 'a', buzang: 'b', research: 'r', violence: 'v', dispatch: 'd', pro: 'j', leave: 'l', mil: 'm' }; return o.indexOf(cl[x[0]]) - o.indexOf(cl[y[0]]); }).forEach(function (d) {
         lines.push(d[1] + ': ' + fmtTotal(c[d[0]].sum) + ' (인정 ' + (d[0] === 'violence' ? violenceRecog(c[d[0]].sum) + ', 한시적 연 단위' : fmtRecog(c[d[0]].rec)) + ')');
       });
     }
@@ -641,10 +641,10 @@
     box.appendChild(stats);
     if (doc) {
       var c = docCompute(p, a, doc.recs);
-      var items = [['총경력', c.total, 0, 't', ''], ['실재직', c.actual, 0, 'a', ''], ['부장', c.buzang, 0, 'b', 'buzang'], ['연구학교', c.research, 0, 'r', ''], ['학교폭력 예방기여', c.violence, 1, 'v', '']];
+      var items = [['총경력', c.total, 0, 't', ''], ['실재직', c.actual, 0, 'a', ''], ['부장', c.buzang, 0, 'b', 'buzang'], ['연구학교', c.research, 0, 'r', ''], ['학교폭력 예방기여', c.violence, 1, 'v', ''], ['파견', c.dispatch, 0, 'd', 'dispatch'], ['휴직', c.leave, 0, 'l', 'leave']];
       if (doc.recs.some(function (r) { return r.k === 'M'; })) items.push(['군 경력', c.mil, 0, 'm', 'mil']);
-      items.push(['파견', c.dispatch, 0, 'd', 'dispatch'], ['휴직', c.leave, 0, 'l', 'leave']);
       if (c.pro.segs.length) items.push(['전문직', c.pro, 0, 'j', 'pro']);
+      items = sortBy(items, function (it) { return it[3]; });
       var ped = editedFromRows(p, a, doc.recs);
       var ss = sec('인사기록 PDF 요약' + (ped ? ' · 입력창 수정 내용 함께 표시' : '')); ss.classList.add('sumsec'); box.appendChild(ss);
       var tb = h('table', { class: 'ps-sum' }, h('thead', null, h('tr', null, h('th', { text: '인사기록 PDF' }), items.map(function (it) { return h('th', { class: it[3], text: it[0] }); }))),
@@ -807,6 +807,55 @@
     return CC.fmtDur(CC.diff(s, e)) + note;
   }
 
+  /* ---- 출력 순서 설정 (카드·요약표·결과 복사·한 장 인쇄 공통) ---- */
+  var SORT_KEY = 'careerCalc.order';
+  var SORT_DEF = [['t', '총경력'], ['a', '실재직 경력'], ['b', '부장 경력'], ['r', '연구학교 경력'], ['v', '학교폭력 예방기여 경력'], ['d', '파견 경력'], ['j', '전문직 경력'], ['l', '휴직 경력'], ['m', '군 경력']];
+  function sortLabel(id) { for (var i = 0; i < SORT_DEF.length; i++) if (SORT_DEF[i][0] === id) return SORT_DEF[i][1]; return id; }
+  function getOrder() {
+    var ids = SORT_DEF.map(function (d) { return d[0]; }), out = [];
+    try { (JSON.parse(localStorage.getItem(SORT_KEY) || '[]') || []).forEach(function (k) { if (ids.indexOf(k) >= 0 && out.indexOf(k) < 0) out.push(k); }); } catch (e) { /* noop */ }
+    ids.forEach(function (k) { if (out.indexOf(k) < 0) out.push(k); });
+    return out;
+  }
+  function setOrder(list) { try { localStorage.setItem(SORT_KEY, JSON.stringify(list)); } catch (e) { /* noop */ } }
+  function sortBy(list, idOf) { var o = getOrder(); return list.slice().sort(function (a, b) { return o.indexOf(idOf(a)) - o.indexOf(idOf(b)); }); }
+
+
+  /* 설정 창: 출력 순서(끌어서 변경) */
+  (function () {
+    var back = $('#setBack'), list = $('#ordList'), dragId = null;
+    var colors = { t: '#0f5c5c', a: '#2f4fb8', b: '#6a4fb0', r: '#c0508a', v: '#1f6fa8', d: '#c07a2a', j: '#3f7a2e', l: '#a64444', m: '#5a6b7d' };
+    function applyOrder(o) { setOrder(o); draw(); updateResults(); var pp = $('#printSheet'); if (pp && pp.children.length) { try { buildPrintSheet(); } catch (e) { /* noop */ } } }
+    function move(id, to) { var o = getOrder(), i = o.indexOf(id); if (to < 0 || to >= o.length) return; o.splice(i, 1); o.splice(to, 0, id); applyOrder(o); }
+    function draw() {
+      list.textContent = '';
+      getOrder().forEach(function (id, i, arr) {
+        var li = h('li', { class: 'ord-item', draggable: 'true', 'data-id': id },
+          h('span', { class: 'grip', text: '⋮⋮', 'aria-hidden': 'true' }),
+          h('span', { class: 'nm', text: sortLabel(id) }),
+          h('button', { type: 'button', 'data-up': id, text: '▲', 'aria-label': sortLabel(id) + ' 위로' }),
+          h('button', { type: 'button', 'data-dn': id, text: '▼', 'aria-label': sortLabel(id) + ' 아래로' }));
+        li.style.setProperty('--c', colors[id] || '#0f5c5c');
+        list.appendChild(li);
+      });
+    }
+    list.addEventListener('click', function (e) {
+      var b = e.target.closest('button'); if (!b) return;
+      var id = b.getAttribute('data-up') || b.getAttribute('data-dn'), i = getOrder().indexOf(id);
+      move(id, b.hasAttribute('data-up') ? i - 1 : i + 1);
+    });
+    list.addEventListener('dragstart', function (e) { var li = e.target.closest('.ord-item'); if (!li) return; dragId = li.dataset.id; li.classList.add('drag'); try { e.dataTransfer.setData('text/plain', dragId); e.dataTransfer.effectAllowed = 'move'; } catch (x) { /* noop */ } });
+    list.addEventListener('dragover', function (e) { var li = e.target.closest('.ord-item'); if (!li || !dragId) return; e.preventDefault(); [].forEach.call(list.children, function (c) { c.classList.toggle('over', c === li && c.dataset.id !== dragId); }); });
+    list.addEventListener('drop', function (e) { var li = e.target.closest('.ord-item'); if (!li || !dragId) return; e.preventDefault(); var to = getOrder().indexOf(li.dataset.id), id = dragId; dragId = null; move(id, to); });
+    list.addEventListener('dragend', function () { dragId = null; draw(); });
+    $('#ordReset').addEventListener('click', function () { applyOrder(SORT_DEF.map(function (d) { return d[0]; })); });
+    function open() { draw(); back.hidden = false; $('#setClose').focus(); }
+    function close() { back.hidden = true; $('#btnSettings').focus(); }
+    $('#btnSettings').addEventListener('click', open);
+    $('#setClose').addEventListener('click', close);
+    back.addEventListener('click', function (e) { if (e.target === back) close(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !back.hidden) close(); });
+  })();
   var FOLD_KEY = 'careerCalc.docFold';
   function loadFold() { try { return JSON.parse(localStorage.getItem(FOLD_KEY) || '{}') || {}; } catch (e) { return {}; } }
   function setFold(id, collapsed) {
@@ -897,7 +946,7 @@
      ['mil', '군 경력', 'm', '병역사항 복무 기간 (총경력에 미포함 · 입력창에서 체크하면 합계에 반영)'],
      ['dispatch', '파견 경력', 'd', '파견·파견연장 기간 (총경력에 포함)'],
      ['leave', '휴직 경력', 'l', '휴직·정직·직위해제 기간 (총경력에서 차감)'],
-     ['pro', '전문직 경력', 'j', '장학사·교육연구사 등 전문직 기간 (총경력에 포함)']].filter(function (d) { return (d[0] !== 'pro' || c.pro.segs.length) && (d[0] !== 'mil' || mil.length); }).forEach(function (d) {
+     ['pro', '전문직 경력', 'j', '장학사·교육연구사 등 전문직 기간 (총경력에 포함)']].filter(function (d) { return (d[0] !== 'pro' || c.pro.segs.length) && (d[0] !== 'mil' || mil.length); }).sort(function (x, y) { var o = getOrder(); return o.indexOf(x[2]) - o.indexOf(y[2]); }).forEach(function (d) {
       var r = c[d[0]];
       var ul = h('ul');
       r.segs.forEach(function (g, i) { ul.appendChild(h('li', { text: CC.fmtSer(g.s) + '~' + CC.fmtSer(g.e) + ' (' + CC.fmtDur(r.durs[i]) + ')' })); });

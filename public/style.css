@@ -549,3 +549,24 @@ h2 .badge { font-size: 12px; margin-left: 6px; }
 @media print {
   .ps-sum thead th.a { color: #2f4fb8; border-bottom-color: #2f4fb8; background: #eaeffc !important; } .ps-sum td.a { background: #f5f7fe !important; color: #25398a; }
 }
+
+/* 설정 */
+.top-right{display:flex;align-items:center;gap:12px}
+.set-btn{white-space:nowrap}
+.set-back{position:fixed;inset:0;background:rgba(20,30,30,.45);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px}
+.set-back[hidden]{display:none}
+.set-modal{background:#fff;border-radius:14px;max-width:460px;width:100%;max-height:90vh;overflow:auto;padding:20px 22px;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+.set-head{display:flex;justify-content:space-between;align-items:center}
+.set-head h2{margin:0;font-size:1.2rem}
+.set-sub{margin:14px 0 4px;font-size:1rem}
+.ord-list{list-style:none;margin:10px 0;padding:0;display:flex;flex-direction:column;gap:6px;counter-reset:o}
+.ord-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid #d9e2e0;border-radius:10px;background:#f7faf9;cursor:grab;user-select:none;border-left:5px solid var(--c,#0f5c5c)}
+.ord-item::before{counter-increment:o;content:counter(o);width:1.4em;text-align:center;font-weight:700;color:#58706e}
+.ord-item .nm{flex:1;font-weight:600}
+.ord-item .grip{color:#9aaeab}
+.ord-item.drag{opacity:.4}
+.ord-item.over{outline:2px dashed #0f5c5c}
+.ord-item button{border:1px solid #cfdad8;background:#fff;border-radius:6px;cursor:pointer;padding:2px 7px}
+.set-foot{text-align:right}
+@media (max-width:560px){.top-inner{flex-wrap:wrap}}
+@media print{.set-back{display:none!important}}
