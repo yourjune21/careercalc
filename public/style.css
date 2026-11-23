@@ -290,3 +290,5 @@ table.rows { width: 100%; border-collapse: collapse; min-width: 800px; }
 .need { color: var(--warn, #9a4a00); font-weight: 600; }
 
 .kind.R { background: #f9e4ef; color: #8a2d5f; }
+
+.p-meta.p-recog { color: var(--accent); font-weight: 600; }

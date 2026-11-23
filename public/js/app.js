@@ -121,10 +121,11 @@
     var list = store.people.filter(function (p) { return !q || p.name.toLowerCase().indexOf(q) >= 0; });
     list.forEach(function (p) {
       var a = analyze(p);
-      var meta = a.okCount ? CC.fmtDur(a.total) : '입력 없음';
+      var meta = a.okCount ? '중복 제외 ' + fmtTotal(a.uniqTotal) : '입력 없음';
       var btn = h('button', { type: 'button', class: 'person', 'data-id': p.id, 'aria-current': p.id === store.selected ? 'true' : null },
         h('span', { class: 'p-name', text: p.name }),
-        h('span', { class: 'p-meta' + (a.overlaps.length ? ' warn' : ''), text: (a.overlaps.length ? '⚠ ' : '') + meta }));
+        h('span', { class: 'p-meta' + (a.overlaps.length ? ' warn' : ''), text: (a.overlaps.length ? '⚠ ' : '') + meta }),
+        a.okCount ? h('span', { class: 'p-meta p-recog', text: '인정 경력 ' + fmtRecog(CC.recognize(a.uniqTotal)) }) : null);
       ul.appendChild(h('li', null, btn));
     });
     if (!list.length) ul.appendChild(h('li', { class: 'p-empty', text: store.people.length ? '검색 결과가 없습니다' : '아직 추가한 사람이 없습니다' }));

@@ -50,6 +50,8 @@ with sync_playwright() as pw:
     check('제외 합산 0년 3개월 29일', pg.inner_text('#totalUniq')=='0년 3개월 29일', pg.inner_text('#totalUniq'))
     check('인정 경력 0년 4개월', pg.inner_text('#totalRecog')=='0년 4개월', pg.inner_text('#totalRecog'))
     pg.screenshot(path='/home/claude/shots/1_main.png', full_page=True)
+    pm=pg.locator('#peopleList .person').first.inner_text(); print('보관함:',pm.replace(chr(10),' | '))
+    check('보관함 중복제외·인정경력', '중복 제외 0년 3개월 29일' in pm and '인정 경력 0년 4개월' in pm, pm)
     # 두번째 사람
     pg.fill('#newName','홍길순'); pg.press('#newName','Enter')
     check('second person empty', pg.locator('#personTitle').inner_text()=='홍길순' and pg.inner_text('#totalValue')=='—')
@@ -97,7 +99,7 @@ with sync_playwright() as pw:
     check('기준일 변경 즉시 재계산', [r0.locator('.res-'+k).inner_text() for k in 'ymd']==['0','2','0'], [r0.locator('.res-'+k).inner_text() for k in 'ymd'])
     pg.wait_for_timeout(600); pg.reload()
     check('기준일 유지(쿠키)', pg.input_value('#refDate')=='2026. 4. 30.', pg.input_value('#refDate'))
-    check('버전 표시', 'v1.14.0' in pg.inner_text('#verLine'), pg.inner_text('#verLine'))
+    check('버전 표시', 'v1.14.1' in pg.inner_text('#verLine'), pg.inner_text('#verLine'))
     # 인사기록 PDF (환경변수 PDF_SAMPLE 로 실제 파일 경로를 줄 때만 실행 — 개인정보 파일은 저장소에 넣지 않음)
     import os
     sample=os.environ.get('PDF_SAMPLE')
