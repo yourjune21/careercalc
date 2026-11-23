@@ -292,3 +292,21 @@ table.rows { width: 100%; border-collapse: collapse; min-width: 800px; }
 .kind.R { background: #f9e4ef; color: #8a2d5f; }
 
 .p-meta.p-recog { color: var(--accent); font-weight: 600; }
+
+.award { margin-top: 10px; padding: 10px 18px; }
+.award > summary { cursor: pointer; }
+.award-body { margin-top: 10px; display: grid; gap: 8px; }
+.award-inputs { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+.award-inputs label { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.f-award { width: 150px; }
+.award-sum { font-weight: 600; }
+.award-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.award-item { width: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; text-align: left; font: inherit; background: transparent; border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; cursor: pointer; }
+.award-item:hover { background: #f6f3ea; }
+.badge { display: inline-block; font-size: 11px; font-weight: 600; line-height: 1.5; padding: 0 7px; border-radius: 999px; vertical-align: middle; white-space: nowrap; }
+.badge.ok { background: #e6f4ec; color: var(--ok, #1f7a45); }
+.badge.no { background: #fbe4e1; color: #b3261e; }
+.badge.unk { background: #ececec; color: #666; }
+h2 .badge { font-size: 12px; margin-left: 6px; }
+.p-name .badge { margin-left: 6px; }
+@media print { .award { display: none; } }

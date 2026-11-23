@@ -112,6 +112,86 @@
   document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') flushSave(); });
 
   /* ---------- 사람 목록 ---------- */
+  /* ---------- 표창 검정 ---------- */
+  var AWARD_KEY = 'careerCalc.award';
+  var award = { merit: '', base: '' };
+  try { var _a = JSON.parse(root_ls().getItem(AWARD_KEY) || '{}'); if (CC.isoToSer(_a.merit) != null) award.merit = _a.merit; if (CC.isoToSer(_a.base) != null) award.base = _a.base; } catch (e) { /* noop */ }
+  function root_ls() { return window.localStorage; }
+  function saveAward() { try { root_ls().setItem(AWARD_KEY, JSON.stringify(award)); } catch (e) { /* noop */ } }
+
+  /** 사람 1명의 표창 가능 여부: null(기간 미입력) | {status:'ok'|'no'|'unknown', reasons:[…]} */
+  function awardCheck(p) {
+    var ms = CC.isoToSer(award.merit), bs = CC.isoToSer(award.base);
+    if (ms == null || bs == null) return null;
+    if (bs < ms) return { status: 'bad', reasons: [] };
+    var recs = p.doc && p.doc.recs ? p.doc.recs : null;
+    if (!recs || !recs.length) return { status: 'unknown', reasons: [] };
+    var ref = CC.isoToSer(effRef()), reasons = [];
+    recs.forEach(function (r) {
+      if (r.x || (r.k !== 'L' && r.k !== 'D')) return;
+      var s = CC.isoToSer(r.s), e = r.e ? CC.isoToSer(r.e) : ref;
+      if (s == null || e == null) return;
+      var os = Math.max(s, ms), oe = Math.min(e, bs);
+      if (os <= oe) reasons.push({ label: r.k === 'L' ? '휴직 등' : '파견', s: os, e: oe });
+    });
+    reasons.sort(function (a, b) { return a.s - b.s; });
+    return { status: reasons.length ? 'no' : 'ok', reasons: reasons };
+  }
+  function awardText(res) {
+    return res.reasons.map(function (g) { return g.label + ' ' + CC.fmtSer(g.s) + '~' + CC.fmtSer(g.e); }).join(' / ');
+  }
+  /** 이름 옆 작은 표시 (small=true: 보관함용) */
+  function awardBadge(p, small) {
+    var res = awardCheck(p);
+    if (!res || res.status === 'bad') return null;
+    var map = { ok: ['표창가능', 'ok'], no: ['표창불가', 'no'], unknown: ['확인불가', 'unk'] };
+    var m = map[res.status];
+    return h('span', { class: 'badge ' + m[1], text: m[0], title: res.status === 'no' ? awardText(res) : (res.status === 'unknown' ? '인사기록 PDF가 없어 확인할 수 없습니다' : '해당 기간에 휴직·파견 없음') });
+  }
+  function setTitleBadge(p) {
+    var el = $('#personAward'), b = awardBadge(p);
+    el.hidden = !b;
+    if (b) { el.className = b.className; el.textContent = b.textContent; el.title = b.title; }
+  }
+  function renderAward() {
+    var sum = $('#awardSum'), ul = $('#awardList');
+    ul.textContent = '';
+    var ms = CC.isoToSer(award.merit), bs = CC.isoToSer(award.base);
+    if (ms == null || bs == null) { sum.textContent = '유공일과 표창 기준일을 모두 입력하면 판정합니다.'; return; }
+    if (bs < ms) { sum.textContent = '표창 기준일이 유공일보다 빠릅니다. 날짜를 확인하세요.'; return; }
+    var cnt = { ok: 0, no: 0, unknown: 0 };
+    store.people.forEach(function (p) {
+      var res = awardCheck(p); cnt[res.status]++;
+      var label = { ok: '표창가능', no: '표창불가', unknown: '확인불가(PDF 없음)' }[res.status];
+      ul.appendChild(h('li', null, h('button', { type: 'button', class: 'award-item', 'data-id': p.id },
+        h('span', { class: 'p-name', text: p.name }),
+        h('span', { class: 'badge ' + ({ ok: 'ok', no: 'no', unknown: 'unk' }[res.status]), text: label }),
+        h('span', { class: 'muted small', text: res.status === 'no' ? awardText(res) : '' }))));
+    });
+    sum.textContent = CC.fmtIso(award.merit) + ' ~ ' + CC.fmtIso(award.base) + ' · 표창가능 ' + cnt.ok + '명 · 표창불가 ' + cnt.no + '명 · 확인불가 ' + cnt.unknown + '명';
+  }
+  function awardRefresh() { renderPeople(); var p = current(); if (p) setTitleBadge(p); }
+  [['#awardMerit', 'merit'], ['#awardBase', 'base']].forEach(function (d) {
+    var el = $(d[0]);
+    if (award[d[1]]) el.value = CC.fmtIso(award[d[1]]);
+    el.addEventListener('input', function () {
+      var t = el.value.trim(), iso = CC.parseDate(t);
+      if (!t) { award[d[1]] = ''; el.classList.remove('invalid'); saveAward(); awardRefresh(); }
+      else if (iso) { award[d[1]] = iso; el.classList.remove('invalid'); saveAward(); awardRefresh(); }
+    });
+    el.addEventListener('blur', function () {
+      var t = el.value.trim(), iso = CC.parseDate(t);
+      if (!t) { el.classList.remove('invalid'); return; }
+      if (iso) { el.value = CC.fmtIso(iso); el.classList.remove('invalid'); } else { el.classList.add('invalid'); toast('날짜 형식을 확인하세요. 예: 2026-8-31, 26/8/31'); }
+    });
+  });
+  $('#awardClear').addEventListener('click', function () {
+    award.merit = ''; award.base = ''; $('#awardMerit').value = ''; $('#awardBase').value = ''; saveAward(); awardRefresh();
+  });
+  $('#awardList').addEventListener('click', function (e) {
+    var b = e.target.closest('.award-item'); if (b) selectPerson(+b.dataset.id);
+  });
+
   function renderPeople() {
     var ul = $('#peopleList');
     ul.textContent = '';
@@ -123,11 +203,12 @@
       var a = analyze(p);
       var meta = a.okCount ? '중복 제외 ' + fmtTotal(a.uniqTotal) : '입력 없음';
       var btn = h('button', { type: 'button', class: 'person', 'data-id': p.id, 'aria-current': p.id === store.selected ? 'true' : null },
-        h('span', { class: 'p-name', text: p.name }),
+        h('span', { class: 'p-name' }, p.name, awardBadge(p, true)),
         h('span', { class: 'p-meta' + (a.overlaps.length ? ' warn' : ''), text: (a.overlaps.length ? '⚠ ' : '') + meta }),
         a.okCount ? h('span', { class: 'p-meta p-recog', text: '인정 경력 ' + fmtRecog(CC.recognize(a.uniqTotal)) }) : null);
       ul.appendChild(h('li', null, btn));
     });
+    renderAward();
     if (!list.length) ul.appendChild(h('li', { class: 'p-empty', text: store.people.length ? '검색 결과가 없습니다' : '아직 추가한 사람이 없습니다' }));
   }
 
@@ -172,6 +253,7 @@
   function updateResults() {
     var p = current();
     if (!p) return;
+    setTitleBadge(p);
     var a = analyze(p);
     var trs = $('#rowsBody').children;
 
@@ -292,6 +374,7 @@
     $('#editor').hidden = !p;
     if (!p) return;
     $('#personTitle').textContent = p.name;
+    setTitleBadge(p);
     $('#personSub').textContent = '경력 입력 · 최대 ' + MAX_ROWS + '행';
     renderRows();
     updateResults();
