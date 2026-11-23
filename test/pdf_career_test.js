@@ -20,7 +20,7 @@ const r = PC.parsePages([page]);
 const fail = (m, ...a) => { console.log('FAIL', m, ...a); process.exitCode = 1; };
 if (r.name !== '홍길동') fail('name', r.name);
 const kinds = r.records.map(x => x.k + x.s + '~' + (x.e || '')).join(' ');
-const expect = 'V2023-03-01~2024-02-29 S2020-03-01~ B2023-03-01~2024-02-29 L2024-03-01~2024-08-31 S2024-09-01~2024-09-01';
+const expect = 'V2023-03-01~2024-02-29 S2020-03-01~ B2023-03-01~2024-02-29 L2024-03-01~2024-08-31 S2024-09-01~2024-09-01 R2022-03-01~2023-02-28';
 // 정렬 순서는 달라도 되므로 집합으로 비교
 const got = r.records.map(x => x.k + x.s + '~' + (x.e || '')).sort().join(' ');
 if (got !== expect.split(' ').sort().join(' ')) fail('records', kinds);

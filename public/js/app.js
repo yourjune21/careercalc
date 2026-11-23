@@ -458,7 +458,7 @@
       lines.push('인사기록 PDF 기준 (기준일 ' + CC.fmtIso(effRef()) + ')');
       var who = [p.doc.name, p.doc.org, p.doc.pos].filter(Boolean).join(' · ');
       if (who) lines.push(who);
-      [['total', '총경력'], ['buzang', '부장 경력'], ['violence', '학교폭력 경력'], ['dispatch', '파견 경력'], ['leave', '휴직 경력'], ['pro', '전문직 경력']].forEach(function (d) {
+      [['total', '총경력'], ['buzang', '부장 경력'], ['research', '연구학교 경력'], ['violence', '학교폭력 예방기여 경력'], ['dispatch', '파견 경력'], ['leave', '휴직 경력'], ['pro', '전문직 경력']].filter(function (d) { return d[0] !== 'pro' || c.pro.segs.length; }).forEach(function (d) {
         lines.push(d[1] + ': ' + fmtTotal(c[d[0]].sum) + ' (인정 ' + (d[0] === 'violence' ? violenceRecog(c[d[0]].sum) + ', 한시적 연 단위' : fmtRecog(c[d[0]].rec)) + ')');
       });
     }
@@ -564,7 +564,7 @@
   });
 
   /* ---------- 인사기록 PDF ---------- */
-  var KIND = { S: '재직', B: '재직·부장', D: '재직·파견', J: '재직·전문직', L: '휴직 등(차감)', V: '학교폭력', M: '군 복무' };
+  var KIND = { S: '재직', B: '재직·부장', D: '재직·파견', J: '재직·전문직', L: '휴직 등(차감)', V: '학교폭력', R: '연구학교', M: '군 복무' };
   var pdfMode = 'current', pdfLib = null;
 
   function setDocMsg(t) { $('#docMsg').textContent = t || ''; }
@@ -610,8 +610,13 @@
       $('#milChk').checked = mil.some(function (r) { return !r.x; });
       $('#milInfo').textContent = mil.map(function (r) { return CC.fmtIso(r.s) + '~' + CC.fmtIso(r.e) + ' (' + recLen(r) + ')'; }).join(', ');
     }
-    [['total', '총경력', 't', '재직 기간에서 휴직 등을 뺀 기간' + (mil.some(function (r) { return !r.x; }) ? ' · 군 경력 포함' : '')], ['buzang', '부장 경력', 'b', '부장교사·부장담임 보직 기간'], ['violence', '학교폭력 경력', 'v', '학교폭력예방및기여 가산점 기간'],
-     ['dispatch', '파견 경력', 'd', '파견·파견연장 기간 (총경력에 포함)'], ['leave', '휴직 경력', 'l', '휴직·정직·직위해제 기간 (총경력에서 차감)'], ['pro', '전문직 경력', 'j', '장학사·교육연구사 등 전문직 기간 (총경력에 포함)']].forEach(function (d) {
+    [['total', '총경력', 't', '재직 기간에서 휴직 등을 뺀 기간' + (mil.some(function (r) { return !r.x; }) ? ' · 군 경력 포함' : '')],
+     ['buzang', '부장 경력', 'b', '부장교사·부장담임 보직 기간'],
+     ['research', '연구학교 경력', 'r', '12.가산점 ‘연구·시범학교’ 기간'],
+     ['violence', '학교폭력 예방기여 경력', 'v', '학교폭력예방및기여 가산점 기간'],
+     ['dispatch', '파견 경력', 'd', '파견·파견연장 기간 (총경력에 포함)'],
+     ['leave', '휴직 경력', 'l', '휴직·정직·직위해제 기간 (총경력에서 차감)'],
+     ['pro', '전문직 경력', 'j', '장학사·교육연구사 등 전문직 기간 (총경력에 포함)']].filter(function (d) { return d[0] !== 'pro' || c.pro.segs.length; }).forEach(function (d) {
       var r = c[d[0]];
       var ul = h('ul');
       r.segs.forEach(function (g, i) { ul.appendChild(h('li', { text: CC.fmtSer(g.s) + '~' + CC.fmtSer(g.e) + ' (' + CC.fmtDur(r.durs[i]) + ')' })); });
@@ -626,7 +631,7 @@
     });
     $('#docNote').textContent = '기준일 ' + CC.fmtIso(effRef()) + '까지 계산 · 기준일을 바꾸면 자동으로 다시 계산됩니다 · 인정 경력은 15일 이상이면 1개월 올림';
 
-    var order = { S: 0, B: 0, D: 0, J: 0, M: 0, L: 1, V: 2 };
+    var order = { S: 0, B: 0, D: 0, J: 0, M: 0, L: 1, R: 2, V: 2 };
     var idx = recs.map(function (r, i) { return i; }).sort(function (a, b) {
       var A = recs[a], B = recs[b];
       return order[A.k] - order[B.k] || (A.s < B.s ? 1 : A.s > B.s ? -1 : 0);

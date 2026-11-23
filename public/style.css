@@ -256,7 +256,7 @@ table.rows { width: 100%; border-collapse: collapse; min-width: 800px; }
 .drop.over, .people.over { border-color: var(--accent); background: var(--accent-soft); }
 .sum-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 14px; }
 .sum-card { border: 1px solid var(--line); border-left: 5px solid var(--c, var(--accent)); border-radius: 10px; padding: 12px 14px; background: #fff; }
-.sum-card.t { --c: #0f5c5c; } .sum-card.b { --c: #6a4fb3; } .sum-card.v { --c: #1d6fa5; } .sum-card.d { --c: #b3722f; } .sum-card.l { --c: #a1473f; } .sum-card.j { --c: #4d7a2e; }
+.sum-card.t { --c: #0f5c5c; } .sum-card.b { --c: #6a4fb3; } .sum-card.v { --c: #1d6fa5; } .sum-card.d { --c: #b3722f; } .sum-card.l { --c: #a1473f; } .sum-card.j { --c: #4d7a2e; } .sum-card.r { --c: #c0508a; }
 .doc-who { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin-top: 14px; padding: 10px 14px; border-radius: 10px; background: #f4f1e8; }
 .doc-who .who-name { font-size: 20px; } .doc-who .who-org { font-size: 16px; } .doc-who .who-pos { font-size: 14px; color: var(--muted, #666); }
 .sum-label { font-size: 13px; font-weight: 700; color: var(--c); }
@@ -288,3 +288,5 @@ table.rows { width: 100%; border-collapse: collapse; min-width: 800px; }
 .total-item.mil .total-label { color: #4d3a8f; }
 
 .need { color: var(--warn, #9a4a00); font-weight: 600; }
+
+.kind.R { background: #f9e4ef; color: #8a2d5f; }

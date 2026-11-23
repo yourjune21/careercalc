@@ -5,9 +5,9 @@
  *  - 그 밖의 내용(주민등록번호·주소 등)은 읽거나 저장하지 않습니다. 이름만 새 사람 추가용으로 읽습니다.
  *  - 모든 처리는 브라우저 안에서만 이루어집니다.
  *
- * 기록(record) 형태: { k:'S'|'B'|'D'|'J'|'L'|'V'|'M', s:'YYYY-MM-DD', e:'YYYY-MM-DD'|'' , x:0|1, lab? }
+ * 기록(record) 형태: { k:'S'|'B'|'D'|'J'|'L'|'V'|'R'|'M', s:'YYYY-MM-DD', e:'YYYY-MM-DD'|'' , x:0|1, lab? }
  *   S 재직(일반)  B 재직 중 부장  D 재직 중 파견  J 재직 중 전문직(장학사·교육연구사 등)
- *   L 휴직 등(총경력에서 차감)  V 학교폭력예방및기여  M 군 복무(기본은 제외 x=1, 체크하면 총경력에 합산)
+ *   L 휴직 등(총경력에서 차감)  V 학교폭력예방및기여  R 연구·시범학교(가산점)  M 군 복무(기본은 제외 x=1, 체크하면 총경력에 합산)
  *   e가 비어 있으면 ‘현재까지(기준일까지)’, x=1 이면 계산에서 제외
  */
 (function (root, factory) {
@@ -146,8 +146,11 @@
       var area = r.texts.filter(function (i) { return i.x + i.w <= b.dateX - 2; })
         .sort(function (p, q) { return q.y - p.y || p.x - q.x; })
         .map(function (i) { return i.str; }).join(' ');
-      if (/학교폭력/.test(norm(area))) {
+      var an = norm(area);
+      if (/학교폭력/.test(an)) {
         records.push({ k: 'V', s: r.s, e: r.e, x: 0, lab: area.replace(/\s+/g, ' ').slice(0, 60) });
+      } else if (/연구.?시범학교|연구학교/.test(an)) {
+        records.push({ k: 'R', s: r.s, e: r.e, x: 0, lab: area.replace(/\s+/g, ' ').slice(0, 60) });
       }
     });
     if (!records.some(function (r) { return r.k === 'V'; })) warnings.push('‘12. 가산점’에서 학교폭력예방및기여 기록을 찾지 못했습니다.');
@@ -208,6 +211,7 @@
       total: pack(CC.subtract(CC.union(iv(kinds(['S', 'B', 'D', 'J', 'M'])), true), leaves)),
       buzang: pack(CC.subtract(CC.union(iv(kinds(['B'])), true), leaves)),
       violence: pack(CC.union(iv(kinds(['V'])))),
+      research: pack(CC.union(iv(kinds(['R'])))),
       dispatch: pack(CC.subtract(CC.union(iv(kinds(['D'])), true), leaves)),
       leave: pack(leaves),
       pro: pack(CC.subtract(CC.union(iv(kinds(['J'])), true), leaves))
