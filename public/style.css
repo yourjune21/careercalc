@@ -634,6 +634,22 @@ h2 .badge { font-size: 12px; margin-left: 6px; }
   .ps-aw td.n { font-weight: 700; white-space: nowrap; } .ps-aw td.why { color: #7a2a2a; font-size: 10px; }
   .ps-aw td.st { font-weight: 800; white-space: nowrap; } .ps-aw td.st.ok { color: #1f7a45; } .ps-aw td.st.no { color: #b3261e; } .ps-aw td.st.unk { color: #7a8886; }
   .print-sheet.cmp .ps-aw { font-size: 9.5px; } .print-sheet.cmp .ps-aw td, .print-sheet.cmp .ps-aw th { padding: 2px 5px; }
-  .tiny .ps-aw { display: none; }
+
 }
 @media print { .ps-aw td:nth-child(2), .ps-aw td:nth-child(3) { white-space: nowrap; } }
+@media print {
+  .tiny .ps-aw { font-size: 8.5px; } .tiny .ps-aw td, .tiny .ps-aw th { padding: 1px 4px; }
+  .tiny .ps-aw td.why { font-size: 8px; max-width: 70mm; }
+  .tiny .ps-sec { margin: 8px 0 4px; }
+}
+@media print {
+  .tiny .ps-aw td { white-space: nowrap; }
+  .tiny .ps-aw td.why { overflow: hidden; text-overflow: ellipsis; max-width: 62mm; }
+  .tiny .ps-rows.xd td { padding: 1px 7px; } .tiny .ps-rows.xd th { padding: 2px 7px; }
+  .tiny .ps-head { padding-bottom: 6px; } .tiny .ps-stat { padding: 8px 12px; } .tiny .ps-stat.main .v { font-size: 26px; margin: 2px 0 3px; }
+}
+@media print {
+  .tiny .ps-rows.xd td { padding: .5px 7px; font-size: 8.5px; } .tiny .ps-rows.xd th { padding: 1.5px 7px; font-size: 8.5px; }
+  .tiny .ps-warn { font-size: 9px; padding: 4px 10px; margin-top: 6px; } .tiny .ps-foot { margin-top: 4px; }
+  .tiny .ps-stats { gap: 6px; } .tiny .ps-sec { margin: 6px 0 3px; }
+}
