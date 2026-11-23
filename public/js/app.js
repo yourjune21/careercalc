@@ -152,7 +152,7 @@
   function awardBadge(p, small) {
     var res = awardCheck(p);
     if (!res || res.status === 'bad') return null;
-    var map = { ok: ['표창가능', 'ok'], no: ['표창불가', 'no'], unknown: ['확인불가', 'unk'] };
+    var map = { ok: ['✓ 표창가능', 'ok'], no: ['✕ 표창불가', 'no'], unknown: ['? 확인불가', 'unk'] };
     var m = map[res.status];
     return h('span', { class: 'badge ' + m[1], text: m[0], title: res.status === 'no' ? awardText(res) : (res.status === 'unknown' ? '인사기록 PDF가 없어 확인할 수 없습니다' : '해당 기간에 휴직·파견 없음') });
   }
@@ -165,19 +165,30 @@
     var sum = $('#awardSum'), ul = $('#awardList');
     ul.textContent = '';
     var ap = awardPeriod();
+    var chip = $('#awardChip'); chip.textContent = ''; chip.className = 'award-chip';
+    sum.className = 'award-sum muted small';
     if (!ap) { sum.textContent = '표창 기준일과 유공기간 시작일을 입력하면 판정합니다.'; return; }
-    if (ap.bad) { sum.textContent = '유공기간 종료일이 시작일보다 빠릅니다. 날짜를 확인하세요.'; return; }
+    if (ap.bad) { sum.className = 'award-sum bad small'; sum.textContent = '유공기간 종료일이 시작일보다 빠릅니다. 날짜를 확인하세요.'; return; }
+    sum.className = 'award-sum';
     var cnt = { ok: 0, no: 0, unknown: 0 };
     store.people.forEach(function (p) {
       var res = awardCheck(p); cnt[res.status]++;
-      var label = { ok: '표창가능', no: '표창불가', unknown: '확인불가(PDF 없음)' }[res.status];
+      var label = { ok: '✓ 표창가능', no: '✕ 표창불가', unknown: '? 확인불가(PDF 없음)' }[res.status];
       ul.appendChild(h('li', null, h('button', { type: 'button', class: 'award-item', 'data-id': p.id },
         h('span', { class: 'p-name', text: p.name }),
         h('span', { class: 'badge ' + ({ ok: 'ok', no: 'no', unknown: 'unk' }[res.status]), text: label }),
         h('span', { class: 'muted small', text: res.status === 'no' ? awardText(res) : '' }))));
     });
+    chip.textContent = '불가 ' + cnt.no + ' · 가능 ' + cnt.ok + (cnt.unknown ? ' · 확인불가 ' + cnt.unknown : '');
+    chip.className = 'award-chip on' + (cnt.no ? ' has-no' : '');
     sum.textContent = '기준일 ' + CC.fmtIso(award.base) + ' · 유공기간 ' + CC.fmtSer(ap.from) + '~' + CC.fmtSer(ap.to) + ' · 표창가능 ' + cnt.ok + '명 · 표창불가 ' + cnt.no + '명 · 확인불가 ' + cnt.unknown + '명';
   }
+  $('#awardToggle').addEventListener('click', function () {
+    var box = $('#awardBox'), open = box.hidden;
+    box.hidden = !open; this.setAttribute('aria-expanded', open ? 'true' : 'false');
+    this.classList.toggle('open', open);
+    if (open) $('#awardBase').focus();
+  });
   function awardRefresh() { renderPeople(); var p = current(); if (p) setTitleBadge(p); }
   [['#awardBase', 'base'], ['#awardFrom', 'from'], ['#awardTo', 'to']].forEach(function (d) {
     var el = $(d[0]);
@@ -193,6 +204,7 @@
       if (iso) { el.value = CC.fmtIso(iso); el.classList.remove('invalid'); } else { el.classList.add('invalid'); toast('날짜 형식을 확인하세요. 예: 2026-8-31, 26/8/31'); }
     });
   });
+  $('#rowsFold').addEventListener('toggle', function () { var p = current(); if (p) updateResults(); });
   $('#awardClear').addEventListener('click', function () {
     award.base = ''; award.from = ''; award.to = ''; $('#awardBase').value = ''; $('#awardFrom').value = ''; $('#awardTo').value = ''; saveAward(); awardRefresh();
   });
@@ -205,6 +217,7 @@
     ul.textContent = '';
     $('#peopleCount').textContent = store.people.length + ' / ' + MAX_PEOPLE;
     $('#peopleSearch').hidden = store.people.length < 8;
+    $('#btnPdfNew').hidden = !store.people.length;
     var q = search.trim().toLowerCase();
     var list = store.people.filter(function (p) { return !q || p.name.toLowerCase().indexOf(q) >= 0; });
     list.forEach(function (p) {
@@ -262,6 +275,7 @@
     var p = current();
     if (!p) return;
     setTitleBadge(p);
+    $('#rowsSummary').textContent = '경력 입력창 · ' + p.rows.filter(function (r) { return r.start || r.end; }).length + '건 입력됨' + ($('#rowsFold').open ? '' : ' (펼쳐서 보기·수정)');
     var a = analyze(p);
     var trs = $('#rowsBody').children;
 
@@ -277,7 +291,8 @@
       tr.classList.toggle('row-warn', !!(x.ov && x.ov.length));
       tr.classList.toggle('row-bad', x.kind === 'bad' || x.kind === 'reversed');
       if (x.ov && x.ov.length) {
-        st.appendChild(h('span', { class: 'chip warn', text: '⚠ ' + x.ov.map(function (j) { return (j + 1) + '번'; }).join('·') + '과 중복' }));
+        var ovTxt = x.ov.map(function (j) { return (j + 1) + '번'; }).join('·') + '과 중복';
+        st.appendChild(h('span', { class: 'chip warn', title: ovTxt, text: x.ov.length <= 2 ? '⚠ ' + ovTxt : '⚠ ' + x.ov.length + '건 중복' }));
       } else if (x.kind === 'bad' || x.kind === 'reversed') {
         st.appendChild(h('span', { class: 'chip bad', text: x.msg }));
       } else if (x.kind === 'partial') {
@@ -314,13 +329,20 @@
       box.appendChild(h('p', { class: 'ok-line', text: '✓ 중복된 기간이 없습니다.' }));
       return;
     }
-    var ul = h('ul', { class: 'warn-list' });
-    a.overlaps.forEach(function (o) {
-      ul.appendChild(h('li', null,
+    var SHOW = 6;
+    function item(o) {
+      return h('li', null,
         h('span', { class: 'tag', text: (o.i + 1) + '번 ↔ ' + (o.j + 1) + '번' }),
-        h('span', { class: 'warn-text', text: '경고) ' + CC.fmtSer(o.s) + '~' + CC.fmtSer(o.e) + ' (' + CC.fmtDur(o.dur) + ' 중복)' })));
-    });
+        h('span', { class: 'warn-text', text: '경고) ' + CC.fmtSer(o.s) + '~' + CC.fmtSer(o.e) + ' (' + CC.fmtDur(o.dur) + ' 중복)' }));
+    }
+    var ul = h('ul', { class: 'warn-list' });
+    a.overlaps.slice(0, SHOW).forEach(function (o) { ul.appendChild(item(o)); });
     box.appendChild(ul);
+    if (a.overlaps.length > SHOW) {
+      var more = h('ul', { class: 'warn-list' });
+      a.overlaps.slice(SHOW).forEach(function (o) { more.appendChild(item(o)); });
+      box.appendChild(h('details', { class: 'warn-more' }, h('summary', { text: '나머지 ' + (a.overlaps.length - SHOW) + '건 더 보기' }), more));
+    }
     box.appendChild(h('p', { class: 'muted small', text: '‘중복 경력 포함’ 합산에는 겹친 기간이 그대로 들어가고, ‘중복 경력 제외’ 합산에서는 겹친 기간을 한 번만 셉니다. 종료일과 다음 시작일이 같은 날이면 그 하루가 중복으로 표시됩니다.' }));
   }
 
@@ -354,6 +376,9 @@
 
   function renderTotal(p, a) {
     renderMil(p, a);
+    var ex = $('#totalExplain');
+    ex.hidden = !(p.doc && p.doc.recs && p.doc.recs.length);
+    if (!ex.hidden) ex.textContent = '아래 합계는 입력창 기준입니다. PDF로 채운 입력창은 휴직 기간을 뺀 구간이라 위 PDF 카드의 총경력과 같은 값이며, 군 경력은 군 경력 체크와 별개로 보라색 칸에 따로 표시됩니다.';
     var v = $('#totalValue'), note = $('#totalNote'), u = $('#totalUniq'), un = $('#totalUniqNote');
     var rv = $('#totalRecog'), rn = $('#totalRecogNote');
     if (!a.okCount) {
@@ -385,6 +410,7 @@
     setTitleBadge(p);
     $('#personSub').textContent = '경력 입력 · 최대 ' + MAX_ROWS + '행';
     renderRows();
+    $('#rowsFold').open = !(p.doc && p.rows.length > 8);
     updateResults();
   }
 

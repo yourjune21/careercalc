@@ -182,6 +182,8 @@
     if ((r = /^(\d{4}|\d{2})\D+(\d{1,2})\D+(\d{1,2})\D*$/.exec(t))) { y = +r[1]; m = +r[2]; d = +r[3]; if (r[1].length === 2) y = fullYear(y, nowYear); }
     else if ((r = /^(\d{4})(\d{2})(\d{2})$/.exec(t))) { y = +r[1]; m = +r[2]; d = +r[3]; }
     else if ((r = /^(\d{2})(\d{2})(\d{2})$/.exec(t))) { y = fullYear(+r[1], nowYear); m = +r[2]; d = +r[3]; }
+    // 연도 없이 월/일만 입력하면 올해로 (11/30, 11.30, 11-30, 11월 30일, 1130)
+    else if ((r = /^(\d{1,2})\D+(\d{1,2})\D*$/.exec(t)) || (r = /^(\d{2})(\d{2})$/.exec(t))) { y = nowYear || new Date().getFullYear(); m = +r[1]; d = +r[2]; }
     else return null;
     if (y < 1900 || y > 2200) return null;
     var iso = y + '-' + pad(m) + '-' + pad(d);

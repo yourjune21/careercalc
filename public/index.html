@@ -30,21 +30,32 @@
       </div>
       <button type="button" class="btn" id="btnRefToday">오늘로</button>
       <button type="button" class="btn" id="btnRefYearEnd"></button>
+      <button type="button" class="btn award-toggle" id="awardToggle" aria-expanded="false" aria-controls="awardBox">표창 검정 <span class="award-chip" id="awardChip"></span> <span class="caret" aria-hidden="true">▾</span></button>
       <p class="muted small ref-note">종료일을 비워 둔 경력은 <b>이 날짜까지</b> 계산합니다. (비워 두면 오늘 날짜)</p>
     </section>
-    <details class="card award" id="awardBox">
-      <summary><b>표창 검정</b> <span class="muted small">— 유공기간·표창 기준일에 휴직·파견 등이 있는지 확인 (쓰지 않을 때는 접어 두세요)</span></summary>
+    <section class="card award" id="awardBox" aria-label="표창 검정" hidden>
+      <h3 class="award-title">표창 검정 <span class="muted small">유공기간·표창 기준일에 휴직·파견 등이 있는지 확인</span></h3>
       <div class="award-body">
-        <div class="award-inputs">
-          <label>표창 기준일 <input id="awardBase" type="text" class="f-award" inputmode="numeric" autocomplete="off" placeholder="예: 2026-8-31"></label>
-          <label>유공기간 <input id="awardFrom" type="text" class="f-award" inputmode="numeric" autocomplete="off" placeholder="시작일 예: 2023-3-1" aria-label="유공기간 시작일"> ~ <input id="awardTo" type="text" class="f-award" inputmode="numeric" autocomplete="off" placeholder="종료일 예: 2026-2-28" aria-label="유공기간 종료일"></label>
+        <div class="award-grid">
+          <div class="af">
+            <label for="awardBase">표창 기준일</label>
+            <input id="awardBase" type="text" class="f-award" inputmode="numeric" autocomplete="off" placeholder="예: 2026-8-31">
+          </div>
+          <div class="af">
+            <label for="awardFrom">유공기간 <span class="muted small">(시작일 ~ 종료일)</span></label>
+            <div class="range">
+              <input id="awardFrom" type="text" class="f-award" inputmode="numeric" autocomplete="off" placeholder="시작일" aria-label="유공기간 시작일">
+              <span aria-hidden="true">~</span>
+              <input id="awardTo" type="text" class="f-award" inputmode="numeric" autocomplete="off" placeholder="종료일 (비우면 기준일)" aria-label="유공기간 종료일">
+            </div>
+          </div>
           <button type="button" class="btn ghost" id="awardClear">지우기</button>
         </div>
-        <p class="muted small"><b>유공기간(시작일~종료일)</b> 동안과 <b>표창 기준일 당일</b>에 <b>휴직·정직·직위해제·파견</b>이 걸치면 ‘표창불가’로 표시합니다. 유공기간 종료일을 비우면 표창 기준일까지로 봅니다. 이 판정은 <b>인사기록 PDF를 불러온 사람</b>만 가능하고, PDF가 없는 사람은 ‘확인 불가’입니다. 결과는 이름 옆과 사람별 보관함에도 작게 표시됩니다.</p>
+        <p class="muted small award-help">유공기간 동안과 표창 기준일 당일에 <b>휴직·정직·직위해제·파견</b>이 걸치면 <b>표창불가</b>입니다. <b>인사기록 PDF를 불러온 사람</b>만 판정할 수 있고, 나머지는 ‘확인불가’입니다. 결과는 이름 옆과 사람별 보관함에도 표시됩니다.</p>
         <p class="award-sum" id="awardSum" role="status"></p>
         <ul class="award-list" id="awardList"></ul>
       </div>
-    </details>
+    </section>
   </div>
 
   <div class="banner" id="banner" role="alert" hidden></div>
@@ -69,14 +80,28 @@
         <h2>먼저 계산할 사람을 추가하세요</h2>
         <p>이름 입력란에 이름을 적고 <b>추가</b>를 누르면 사람별로 경력을 따로 입력·저장할 수 있습니다.<br>최대 100명까지 이 브라우저에 기억합니다.</p>
         <div class="drop empty-drop" id="emptyDrop">
-          <p><b>또는 인사기록(인사카드) PDF를 첨부하세요</b></p>
-          <p class="need">인사기록카드(전체) 파일을 첨부하십시오.</p>
-          <p class="muted small">PDF를 여기에 끌어다 놓거나 아래 버튼을 누르면 이름·소속과 총경력·부장·학교폭력·파견·휴직·전문직 경력이 자동 입력됩니다.<br>PDF로 입력 시 서버에 저장하지 않습니다.</p>
+          <div class="drop-icon" aria-hidden="true">📄</div>
+          <p class="drop-title">또는 인사기록(인사카드) PDF를 첨부하세요</p>
+          <p class="need-box">인사기록카드(전체) 파일을 첨부하십시오.</p>
+          <p class="muted small">PDF를 여기에 끌어다 놓거나 아래 버튼을 누르면 이름·소속과 총경력·부장·연구학교·학교폭력 예방기여·파견·휴직 경력이 자동 입력됩니다.<br>PDF로 입력 시 서버에 저장하지 않습니다.</p>
           <button type="button" class="btn primary" id="btnPdfEmpty">PDF 첨부하기</button>
         </div>
       </div>
 
       <div id="editor" hidden>
+        <div class="card person-head">
+          <div class="work-head">
+            <div>
+              <h2><span id="personTitle"></span> <span id="personAward" class="badge" hidden></span></h2>
+              <p class="muted" id="personSub"></p>
+            </div>
+            <div class="head-actions">
+              <button type="button" class="btn" id="btnRename">이름 변경</button>
+              <button type="button" class="btn danger" id="btnDelete">삭제</button>
+            </div>
+          </div>
+        </div>
+
         <div class="card doc" id="docCard">
           <div class="doc-head">
             <div>
@@ -104,51 +129,8 @@
         </div>
         <input type="file" id="pdfFile" accept="application/pdf,.pdf" hidden>
 
-        <div class="card">
-          <div class="work-head">
-            <div>
-              <h2><span id="personTitle"></span> <span id="personAward" class="badge" hidden></span></h2>
-              <p class="muted" id="personSub"></p>
-            </div>
-            <div class="head-actions">
-              <button type="button" class="btn" id="btnRename">이름 변경</button>
-              <button type="button" class="btn danger" id="btnDelete">삭제</button>
-            </div>
-          </div>
-
-          <p class="guide">날짜는 <code>2026-3-1</code>, <code>2026/3/1</code>, <code>2026.3.1</code>, <code>20260301</code> 어느 형식으로 입력해도 됩니다. 연도는 <code>21/2/20</code>처럼 두 자리만 써도 됩니다(21→2021). 입력 칸에서 <kbd>Enter</kbd>를 누르면 다음 줄로 이동합니다.</p>
-
-          <div class="table-wrap">
-            <table class="rows" id="rowsTable">
-              <thead>
-                <tr>
-                  <th class="c-no">순</th>
-                  <th class="c-memo">내용</th>
-                  <th class="c-date">시작일</th>
-                  <th class="c-date">종료일</th>
-                  <th class="c-n">년</th>
-                  <th class="c-n">월</th>
-                  <th class="c-n">일</th>
-                  <th class="c-st">확인</th>
-                  <th class="c-del"><span class="sr">삭제</span></th>
-                </tr>
-              </thead>
-              <tbody id="rowsBody"></tbody>
-            </table>
-          </div>
-
-          <div class="row-actions">
-            <button type="button" class="btn" id="btnAddRow">+ 행 추가</button>
-            <button type="button" class="btn ghost" id="btnClearRows">입력 내용 모두 지우기</button>
-          </div>
-        </div>
-
-        <div class="card" id="warnCard">
-          <h3>중복 기간 검사</h3>
-          <div id="warnBody"></div>
-        </div>
-
         <div class="card total" id="totalCard">
+          <p class="muted small total-explain" id="totalExplain" hidden></p>
           <div class="total-main">
           <div class="total-grid">
             <div class="total-item">
@@ -185,6 +167,45 @@
             <button type="button" class="btn" id="btnPrint">인쇄</button>
           </div>
         </div>
+
+
+        <div class="card">
+          <p class="guide">날짜는 <code>2026-3-1</code>, <code>2026/3/1</code>, <code>2026.3.1</code>, <code>20260301</code> 어느 형식으로 입력해도 됩니다. 연도는 <code>21/2/20</code>처럼 두 자리만 써도 됩니다(21→2021). 연도 없이 <code>11/30</code>처럼 쓰면 올해로 입력됩니다. 입력 칸에서 <kbd>Enter</kbd>를 누르면 다음 줄로 이동합니다.</p>
+
+          <details class="rows-fold" id="rowsFold" open>
+          <summary id="rowsSummary">경력 입력창</summary>
+          <div class="table-wrap">
+            <table class="rows" id="rowsTable">
+              <thead>
+                <tr>
+                  <th class="c-no">순</th>
+                  <th class="c-memo">내용</th>
+                  <th class="c-date">시작일</th>
+                  <th class="c-date">종료일</th>
+                  <th class="c-n">년</th>
+                  <th class="c-n">월</th>
+                  <th class="c-n">일</th>
+                  <th class="c-st">확인</th>
+                  <th class="c-del"><span class="sr">삭제</span></th>
+                </tr>
+              </thead>
+              <tbody id="rowsBody"></tbody>
+            </table>
+          </div>
+
+          <div class="row-actions">
+            <button type="button" class="btn" id="btnAddRow">+ 행 추가</button>
+            <button type="button" class="btn ghost" id="btnClearRows">입력 내용 모두 지우기</button>
+          </div>
+          </details>
+        </div>
+
+        <div class="card" id="warnCard">
+          <h3>중복 기간 검사</h3>
+          <div id="warnBody"></div>
+        </div>
+
+
       </div>
     </section>
   </main>
