@@ -8,6 +8,7 @@
   <meta name="robots" content="noindex">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230f5c5c'/%3E%3Cpath d='M9 11h14M9 16h14M9 21h8' stroke='%23fff' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="cap.css">
 </head>
 <body>
   <div class="set-back" id="multiBack" hidden>
@@ -16,7 +17,7 @@
     <p class="muted small">출력할 사람을 선택하면 한 사람당 A4 한 장씩 이어서 인쇄합니다. (PDF로 저장도 가능)</p>
     <div class="multi-tools"><input id="multiSearch" type="search" placeholder="이름 검색" autocomplete="off"><button type="button" class="btn" id="multiAll">전체 선택</button><button type="button" class="btn" id="multiNone">선택 해제</button></div>
     <ul class="multi-list" id="multiList"></ul>
-    <div class="set-foot"><span class="muted small" id="multiCount"></span> <button type="button" class="btn btn-print" id="multiGo" disabled>출력</button></div>
+    <div class="set-foot"><span class="muted small" id="multiCount"></span> <button type="button" class="btn" id="multiPdf" disabled>PDF 저장</button> <button type="button" class="btn" id="multiJpg" disabled>JPG 저장</button> <button type="button" class="btn btn-print" id="multiGo" disabled>출력</button></div>
   </section>
 </div>
 <div class="set-back" id="setBack" hidden>
@@ -150,6 +151,8 @@
             <div class="total-actions">
               <button type="button" class="btn primary" id="btnCopy">결과 복사</button>
               <button type="button" class="btn btn-print" id="btnPrint" title="입력 내용을 A4 한 장으로 정리해 인쇄합니다">한 장 인쇄</button>
+              <button type="button" class="btn" id="btnSavePdf" title="인쇄 페이지를 PDF 파일로 저장">PDF 저장</button>
+              <button type="button" class="btn" id="btnSaveJpg" title="인쇄 페이지를 JPG 이미지로 저장">JPG 저장</button>
             </div>
           </div>
           <div class="total-board">
@@ -277,6 +280,7 @@
   <script src="js/calc.js"></script>
   <script src="js/storage.js"></script>
   <script src="js/pdf-career.js"></script>
+  <script src="js/vendor/html2canvas.min.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

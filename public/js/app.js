@@ -806,6 +806,72 @@
     box.appendChild(h('p', { class: 'ps-foot', text: '민법 역법(초일 산입·말일 만료)으로 계산 · 인정 경력은 일수 15일 이상이면 1개월 올림 · 경력 계산기 v' + (window.APP_INFO ? window.APP_INFO.version : '') }));
   }
   window.addEventListener('beforeprint', function () { if (!document.body.classList.contains('print-multi')) buildPrintSheet(); });
+
+  /* ---------- 인쇄 페이지를 JPG·PDF 파일로 저장 ---------- */
+  function fileStamp() { var d = new Date(); return d.getFullYear() + two(d.getMonth() + 1) + two(d.getDate()); }
+  function safeName(n) { return String(n || '경력').replace(/[\\\/:*?"<>|\s]+/g, '_').slice(0, 30); }
+  function download(blob, name) {
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+  }
+  function canvasToJpeg(cv) {
+    return new Promise(function (res) {
+      cv.toBlob(function (b) { b.arrayBuffer().then(function (ab) { res({ blob: b, bytes: new Uint8Array(ab), w: cv.width, h: cv.height }); }); }, 'image/jpeg', 0.93);
+    });
+  }
+  /** 사람마다 A4 한 장 분량의 캔버스를 만든다 (인쇄와 같은 모양: cap.css) */
+  function renderSheets(people) {
+    var out = [], cap = h('div', { class: 'cap' });
+    document.body.appendChild(cap);
+    var chain = Promise.resolve();
+    people.forEach(function (p) {
+      chain = chain.then(function () {
+        cap.textContent = '';
+        var sec = h('section', { class: 'print-sheet' }); buildSheetFor(p, sec); cap.appendChild(sec);
+        return html2canvas(cap, { scale: 2, backgroundColor: '#ffffff', logging: false }).then(function (cv) { return canvasToJpeg(cv); }).then(function (j) { out.push({ p: p, jpg: j }); });
+      });
+    });
+    return chain.then(function () { cap.remove(); return out; }, function (e) { cap.remove(); throw e; });
+  }
+  /** JPEG 이미지들을 한 장씩 A4에 채운 PDF로 묶는다 */
+  function pdfFromJpegs(imgs) {
+    var enc = new TextEncoder(), parts = [], len = 0, offs = [], W = 595.28, H = 841.89;
+    function put(x) { var b = typeof x === 'string' ? enc.encode(x) : x; parts.push(b); len += b.length; }
+    function obj(n, fn) { offs[n] = len; put(n + ' 0 obj\n'); fn(); put('\nendobj\n'); }
+    put('%PDF-1.4\n');
+    var kids = imgs.map(function (_, i) { return (3 + 3 * i) + ' 0 R'; }).join(' ');
+    obj(1, function () { put('<< /Type /Catalog /Pages 2 0 R >>'); });
+    obj(2, function () { put('<< /Type /Pages /Count ' + imgs.length + ' /Kids [' + kids + '] >>'); });
+    imgs.forEach(function (im, i) {
+      var pg = 3 + 3 * i, ct = pg + 1, ig = pg + 2, cs = 'q ' + W + ' 0 0 ' + H + ' 0 0 cm /Im0 Do Q';
+      obj(pg, function () { put('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + W + ' ' + H + '] /Resources << /XObject << /Im0 ' + ig + ' 0 R >> >> /Contents ' + ct + ' 0 R >>'); });
+      obj(ct, function () { put('<< /Length ' + cs.length + ' >>\nstream\n' + cs + '\nendstream'); });
+      obj(ig, function () { put('<< /Type /XObject /Subtype /Image /Width ' + im.w + ' /Height ' + im.h + ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ' + im.bytes.length + ' >>\nstream\n'); put(im.bytes); put('\nendstream'); });
+    });
+    var total = 2 + 3 * imgs.length, xr = len, x = 'xref\n0 ' + (total + 1) + '\n0000000000 65535 f \n';
+    for (var n = 1; n <= total; n++) x += ('0000000000' + offs[n]).slice(-10) + ' 00000 n \n';
+    put(x + 'trailer\n<< /Size ' + (total + 1) + ' /Root 1 0 R >>\nstartxref\n' + xr + '\n%%EOF');
+    return new Blob(parts, { type: 'application/pdf' });
+  }
+  function saveSheets(people, kind, btns) {
+    if (!people.length) return;
+    if (typeof html2canvas !== 'function') { toast('저장 기능을 불러오지 못했습니다. 새로고침 후 다시 시도하세요.'); return; }
+    var labels = btns.map(function (b) { return b.textContent; });
+    btns.forEach(function (b) { b.disabled = true; b.textContent = '저장 중…'; });
+    renderSheets(people).then(function (list) {
+      if (kind === 'pdf') {
+        download(pdfFromJpegs(list.map(function (x) { return x.jpg; })), (list.length === 1 ? '경력결과_' + safeName(list[0].p.name) : '경력결과_' + list.length + '명') + '_' + fileStamp() + '.pdf');
+      } else {
+        list.forEach(function (x, i) { setTimeout(function () { download(x.jpg.blob, '경력결과_' + safeName(x.p.name) + '_' + fileStamp() + '.jpg'); }, i * 400); });
+      }
+      toast(kind === 'pdf' ? 'PDF로 저장했습니다.' : (list.length > 1 ? 'JPG ' + list.length + '개를 저장합니다. (여러 파일 다운로드를 허용해 주세요)' : 'JPG로 저장했습니다.'));
+    }).catch(function () { toast('저장하지 못했습니다. 인쇄 → PDF로 저장을 이용해 주세요.'); })
+      .then(function () { btns.forEach(function (b, i) { b.textContent = labels[i]; b.disabled = false; }); });
+  }
+  $('#btnSavePdf').addEventListener('click', function () { var p = current(); if (p) saveSheets([p], 'pdf', [this]); });
+  $('#btnSaveJpg').addEventListener('click', function () { var p = current(); if (p) saveSheets([p], 'jpg', [this]); });
+
   window.addEventListener('afterprint', function () { document.body.classList.remove('print-multi'); var m = $('#printMulti'); if (m) m.textContent = ''; });
 
   /* ---------- 여러 사람 한꺼번에 출력 ---------- */
@@ -813,7 +879,7 @@
     var back = $('#multiBack'), list = $('#multiList'), cnt = $('#multiCount'), go = $('#multiGo'), q = $('#multiSearch');
     var sel = {};
     function selCount() { return store.people.filter(function (p) { return sel[p.id]; }).length; }
-    function sync() { var n = selCount(); cnt.textContent = '선택 ' + n + '명 / 전체 ' + store.people.length + '명'; go.disabled = !n; go.textContent = n ? '선택한 ' + n + '명 출력 (1명당 1장)' : '출력할 사람을 선택하세요'; }
+    function sync() { var n = selCount(); $('#multiPdf').disabled = !n; $('#multiJpg').disabled = !n; cnt.textContent = '선택 ' + n + '명 / 전체 ' + store.people.length + '명'; go.disabled = !n; go.textContent = n ? '선택한 ' + n + '명 출력 (1명당 1장)' : '출력할 사람을 선택하세요'; }
     function draw() {
       list.textContent = '';
       var t = q.value.trim().toLowerCase();
@@ -835,6 +901,9 @@
     function setAll(v) { [].forEach.call(list.querySelectorAll('input[type=checkbox]'), function (c) { c.checked = v; sel[c.getAttribute('data-id')] = v; }); sync(); }
     $('#multiAll').addEventListener('click', function () { setAll(true); });
     $('#multiNone').addEventListener('click', function () { setAll(false); });
+    function picked() { return store.people.filter(function (p) { return sel[p.id]; }); }
+    $('#multiPdf').addEventListener('click', function () { saveSheets(picked(), 'pdf', [this]); });
+    $('#multiJpg').addEventListener('click', function () { saveSheets(picked(), 'jpg', [this]); });
     go.addEventListener('click', function () {
       var people = store.people.filter(function (p) { return sel[p.id]; });
       if (!people.length) return;
