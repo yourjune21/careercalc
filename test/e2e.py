@@ -97,7 +97,7 @@ with sync_playwright() as pw:
     check('기준일 변경 즉시 재계산', [r0.locator('.res-'+k).inner_text() for k in 'ymd']==['0','2','0'], [r0.locator('.res-'+k).inner_text() for k in 'ymd'])
     pg.wait_for_timeout(600); pg.reload()
     check('기준일 유지(쿠키)', pg.input_value('#refDate')=='2026. 4. 30.', pg.input_value('#refDate'))
-    check('버전 표시', 'v1.12.1' in pg.inner_text('#verLine'), pg.inner_text('#verLine'))
+    check('버전 표시', 'v1.13.0' in pg.inner_text('#verLine'), pg.inner_text('#verLine'))
     # 인사기록 PDF (환경변수 PDF_SAMPLE 로 실제 파일 경로를 줄 때만 실행 — 개인정보 파일은 저장소에 넣지 않음)
     import os
     sample=os.environ.get('PDF_SAMPLE')
@@ -131,7 +131,7 @@ with sync_playwright() as pw:
         check('총경력 14년 2개월 23일', vals[0]=='14년 2개월 23일', vals)
         check('부장 5년', vals[1]=='5년 0개월 0일', vals)
         check('학교폭력 9년 2개월', vals[2]=='9년 2개월 0일', vals)
-        check('인정 경력', recs==['14년 3개월','5년 0개월','9년 2개월','2년 0개월','0년 6개월','0년 9개월'], recs)
+        check('인정 경력', recs==['14년 3개월','5년 0개월','9년','2년 0개월','0년 6개월','0년 9개월'], recs)
         pg.screenshot(path='/home/claude/shots/3_pdf.png', full_page=True)
         pg.wait_for_timeout(600); pg.reload()
         check('PDF 결과 유지(쿠키)', pg.locator('#sumGrid .sum-card').count()==6 and pg.locator('#sumGrid .sum-value').first.inner_text()=='14년 2개월 23일')

@@ -234,6 +234,8 @@
   }
 
   function fmtTotal(t) { return t.years + '년 ' + t.months + '개월 ' + t.days + '일'; }
+  /** 학교폭력 경력(한시적): 1년 2개월 → 1년, 연 단위로 버림 */
+  function violenceRecog(t) { return t.years + '년'; }
   function fmtRecog(r) { return r.years + '년 ' + r.months + '개월'; }
 
   /** 군 경력이 있는 사람: 입력창 경력 + 군 복무를 합쳐(중복은 한 번만) 따로 표시 */
@@ -457,7 +459,7 @@
       var who = [p.doc.name, p.doc.org, p.doc.pos].filter(Boolean).join(' · ');
       if (who) lines.push(who);
       [['total', '총경력'], ['buzang', '부장 경력'], ['violence', '학교폭력 경력'], ['dispatch', '파견 경력'], ['leave', '휴직 경력'], ['pro', '전문직 경력']].forEach(function (d) {
-        lines.push(d[1] + ': ' + fmtTotal(c[d[0]].sum) + ' (인정 ' + fmtRecog(c[d[0]].rec) + ')');
+        lines.push(d[1] + ': ' + fmtTotal(c[d[0]].sum) + ' (인정 ' + (d[0] === 'violence' ? violenceRecog(c[d[0]].sum) + ', 한시적 연 단위' : fmtRecog(c[d[0]].rec)) + ')');
       });
     }
     return lines.join('\n');
@@ -616,7 +618,9 @@
       grid.appendChild(h('div', { class: 'sum-card ' + d[2] },
         h('div', { class: 'sum-label', text: d[1] }),
         h('div', { class: 'sum-value', text: fmtTotal(r.sum) }),
-        h('div', { class: 'sum-rec' }, '인정 경력 ', h('b', { text: fmtRecog(r.rec) })),
+        d[0] === 'violence'
+          ? h('div', { class: 'sum-rec' }, '인정 경력(한시적 · 연 단위) ', h('b', { text: violenceRecog(r.sum) }), h('span', { class: 'muted small', text: ' 1년 미만은 버림' }))
+          : h('div', { class: 'sum-rec' }, '인정 경력 ', h('b', { text: fmtRecog(r.rec) })),
         h('div', { class: 'sum-rec', text: d[3] }),
         r.segs.length ? h('details', { class: 'sum-seg' }, h('summary', { text: '기간 ' + r.segs.length + '구간 보기' }), ul) : h('div', { class: 'sum-seg', text: '해당 기록 없음' })));
     });
