@@ -18,6 +18,7 @@
     for (var i = 2; i < arguments.length; i++) {
       var c = arguments[i];
       if (c == null) continue;
+      if (Array.isArray(c)) { c.forEach(function (d) { if (d != null) el.appendChild(typeof d === 'string' ? document.createTextNode(d) : d); }); continue; }
       el.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
     }
     return el;
@@ -628,7 +629,71 @@
     if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(function () { toast('복사했습니다.'); }, fallback);
     else fallback();
   });
-  $('#btnPrint').addEventListener('click', function () { window.print(); });
+  /* ---------- 한 장 인쇄용 결과서 ---------- */
+  function two(n) { return n < 10 ? '0' + n : '' + n; }
+  function buildPrintSheet() {
+    var box = $('#printSheet'), p = current();
+    box.textContent = '';
+    if (!p) return;
+    var a = analyze(p), now = new Date();
+    var rec = a.okCount ? CC.recognize(a.uniqTotal) : null;
+    var doc = p.doc && p.doc.recs && p.doc.recs.length ? p.doc : null;
+    var who = [doc && doc.org, doc && doc.pos].filter(Boolean).join(' · ');
+    box.appendChild(h('div', { class: 'ps-head' },
+      h('div', null, h('h1', { text: '경력 산정 결과서' }), h('div', { class: 'ps-who' }, h('b', { text: (doc && doc.name) || p.name }), who ? h('span', { text: '  ' + who }) : null)),
+      h('div', { class: 'ps-meta' }, h('div', { text: '경력 산정 기준일  ' + CC.fmtIso(effRef()) }), h('div', { text: '출력  ' + now.getFullYear() + '. ' + (now.getMonth() + 1) + '. ' + now.getDate() + '. ' + two(now.getHours()) + ':' + two(now.getMinutes()) }))));
+
+    function stat(label, val, sub, cls) {
+      return h('div', { class: 'ps-stat ' + (cls || '') }, h('div', { class: 'l', text: label }), h('div', { class: 'v', text: val }), sub ? h('div', { class: 's', text: sub }) : null);
+    }
+    var stats = h('div', { class: 'ps-stats' },
+      stat('인정 경력', rec ? fmtRecog(rec) : '—', rec ? '중복 제외 ' + fmtTotal(a.uniqTotal) + (a.uniqTotal.days >= 15 ? ' → 15일 이상 1개월 올림' : ' → 15일 미만 버림') : '', 'main'),
+      stat('중복 제외 합산', a.okCount ? fmtTotal(a.uniqTotal) : '—', a.overlaps.length ? '겹친 기간 한 번만 계산' : '중복 없음'),
+      stat('중복 포함 합산', a.okCount ? fmtTotal(a.total) : '—', a.okCount + '건 그대로 합산'));
+    box.appendChild(stats);
+    if (!$('#milTotal').hidden) {
+      box.appendChild(h('div', { class: 'ps-mil' }, h('b', { text: '군 경력 포함  ' }),
+        '중복 제외 합산 ', h('b', { text: $('#milUniq').textContent }), '  ·  인정 경력 ', h('b', { text: $('#milRecog').textContent }),
+        h('span', { class: 'n', text: '  (' + $('#milUniqNote').textContent + ')' })));
+    }
+
+    if (doc) {
+      var c = PC.compute(doc.recs, effRef(), CC);
+      var items = [['총경력', c.total, 0], ['부장', c.buzang, 0], ['연구학교', c.research, 0], ['학교폭력 예방기여', c.violence, 1], ['파견', c.dispatch, 0], ['휴직', c.leave, 0]];
+      if (c.pro.segs.length) items.push(['전문직', c.pro, 0]);
+      var tb = h('table', { class: 'ps-sum' }, h('thead', null, h('tr', null, h('th', { text: '인사기록 PDF' }), items.map(function (it) { return h('th', { text: it[0] }); }))),
+        h('tbody', null,
+          h('tr', null, h('th', { text: '경력' }), items.map(function (it) { return h('td', { text: fmtTotal(it[1].sum) }); })),
+          h('tr', null, h('th', { text: '인정' }), items.map(function (it) { return h('td', { text: it[2] ? violenceRecog(it[1].sum) + ' (한시적)' : fmtRecog(it[1].rec) }); }))));
+      box.appendChild(tb);
+    }
+
+    var list = [];
+    p.rows.forEach(function (r, i) { if (r.memo || r.start || r.end || r.sRaw || r.eRaw) list.push(i); });
+    var dense = list.length > 22 ? ' dense' : '';
+    var body = h('tbody');
+    list.forEach(function (i, n) {
+      var r = p.rows[i], x = a.rows[i];
+      var note = x.kind === 'off' ? '제외(미산입)' : x.ov && x.ov.length ? x.ov.map(function (j) { return (j + 1) + '번'; }).join('·') + '과 중복' : x.kind === 'ok' ? (x.usedRef ? '기준일까지' : '') : (x.msg || '확인 필요');
+      var ok = x.kind === 'ok';
+      body.appendChild(h('tr', { class: (x.kind === 'off' ? 'off ' : '') + (x.ov && x.ov.length ? 'ov' : '') },
+        h('td', { class: 'c', text: String(i + 1) }),
+        h('td', null, h('b', { text: r.memo || '' }), r.dept ? h('span', { class: 'dp', text: '  ' + r.dept }) : null),
+        h('td', { class: 'c', text: r.start ? CC.fmtIso(r.start) : (r.sRaw || '') }),
+        h('td', { class: 'c', text: r.end ? CC.fmtIso(r.end) : (ok && x.usedRef ? CC.fmtSer(x.e) : (r.eRaw || '')) }),
+        h('td', { class: 'c', text: ok ? fmtTotal(x.dur) : '' }),
+        h('td', { class: 'nt', text: note })));
+    });
+    box.appendChild(h('table', { class: 'ps-rows' + dense }, h('thead', null, h('tr', null, h('th', { class: 'c', text: '순' }), h('th', { text: '구분 · 부서' }), h('th', { class: 'c', text: '시작일' }), h('th', { class: 'c', text: '종료일' }), h('th', { class: 'c', text: '기간' }), h('th', { text: '비고' }))), body));
+    if (!list.length) box.appendChild(h('p', { class: 'ps-empty', text: '입력된 경력이 없습니다.' }));
+    if (a.overlaps.length) {
+      var shown = a.overlaps.slice(0, 6).map(function (o) { return (o.i + 1) + '↔' + (o.j + 1) + '번 ' + CC.fmtSer(o.s) + '~' + CC.fmtSer(o.e) + ' (' + CC.fmtDur(o.dur) + ')'; }).join('  /  ');
+      box.appendChild(h('p', { class: 'ps-warn' }, h('b', { text: '중복 ' + a.overlaps.length + '건  ' }), shown + (a.overlaps.length > 6 ? ' 외 ' + (a.overlaps.length - 6) + '건' : '')));
+    }
+    box.appendChild(h('p', { class: 'ps-foot', text: '민법 역법(초일 산입·말일 만료)으로 계산 · 인정 경력은 일수 15일 이상이면 1개월 올림 · 경력 계산기 v' + (window.APP_INFO ? window.APP_INFO.version : '') }));
+  }
+  window.addEventListener('beforeprint', buildPrintSheet);
+  $('#btnPrint').addEventListener('click', function () { buildPrintSheet(); window.print(); });
 
   /* ---------- 저장 방식·백업 ---------- */
   function renderMeter() {

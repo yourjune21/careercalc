@@ -213,19 +213,39 @@ table.rows { width: 100%; border-collapse: collapse; min-width: 800px; }
   .total-grid { grid-template-columns: 1fr; }
 }
 
-/* 인쇄: 선택한 사람의 표·검사·합산만 */
+/* 인쇄: 별도의 결과서(#printSheet)만 A4 한 장으로 */
+.print-sheet { display: none; }
+@page { size: A4; margin: 12mm; }
 @media print {
-  body { background: #fff; font-size: 12px; }
-  .top, .people, .foot, .banner, .toast, .head-actions, .row-actions, .total-actions, .guide, .cal, .del, .c-del { display: none !important; }
-  .layout { display: block; margin: 0; padding: 0; }
-  .card { border: 0; box-shadow: none; padding: 6px 0; }
-  .table-wrap { overflow: visible; }
-  table.rows { min-width: 0; }
-  .rows tr:has(.res-y:empty) { display: none; }
-  .rows .c-st { display: none; }
-  .rows th.c-st { display: none; }
-  input { border: 0 !important; background: transparent !important; padding: 0 !important; }
-  .rows tr.row-warn td, .rows tr.row-bad td { background: transparent; }
+  body { background: #fff !important; font-size: 11px; color: #111; }
+  body > *:not(#printSheet) { display: none !important; }
+  .print-sheet { display: block; }
+  .ps-head { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #0f5c5c; padding-bottom: 6px; margin-bottom: 10px; }
+  .ps-head h1 { font-size: 20px; margin: 0 0 4px; color: #0f5c5c; }
+  .ps-who { font-size: 13px; } .ps-who span { color: #444; }
+  .ps-meta { text-align: right; font-size: 10.5px; color: #444; line-height: 1.5; }
+  .ps-stats { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 8px; margin-bottom: 6px; }
+  .ps-stat { border: 1px solid #bbb; border-radius: 6px; padding: 7px 10px; }
+  .ps-stat .l { font-size: 10px; color: #555; font-weight: 700; } .ps-stat .v { font-size: 16px; font-weight: 800; margin: 2px 0; } .ps-stat .s { font-size: 9.5px; color: #555; }
+  .ps-stat.main { background: #0f5c5c !important; border-color: #0f5c5c; color: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .ps-stat.main .l, .ps-stat.main .s { color: #d6ece9; } .ps-stat.main .v { font-size: 22px; }
+  .ps-mil { border: 1px solid #b9a9e3; background: #f4f0fc !important; border-radius: 6px; padding: 5px 10px; font-size: 11px; margin-bottom: 8px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .ps-mil .n { color: #666; font-size: 9.5px; }
+  table.ps-sum, table.ps-rows { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  .ps-sum th, .ps-sum td { border: 1px solid #bbb; padding: 3px 5px; text-align: center; font-size: 10px; }
+  .ps-sum thead th { background: #eef5f4 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .ps-sum tbody th { background: #f6f6f6 !important; width: 70px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .ps-rows th, .ps-rows td { border: 1px solid #ccc; padding: 3px 6px; font-size: 10.5px; text-align: left; }
+  .ps-rows thead th { background: #eef5f4 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .ps-rows .c { text-align: center; white-space: nowrap; }
+  .ps-rows .dp { color: #666; font-size: 9.5px; } .ps-rows .nt { font-size: 9.5px; color: #8a5a00; }
+  .ps-rows tr.off td { color: #999; text-decoration: line-through; } .ps-rows tr.off td.nt { text-decoration: none; }
+  .ps-rows tr.ov td { background: #fff7e6 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .ps-rows tr { break-inside: avoid; }
+  .ps-rows.dense th, .ps-rows.dense td { padding: 1.5px 5px; font-size: 9px; }
+  .ps-warn { font-size: 9.5px; color: #8a5a00; margin: 6px 0 0; }
+  .ps-empty { color: #777; }
+  .ps-foot { margin: 10px 0 0; padding-top: 5px; border-top: 1px solid #ccc; font-size: 9px; color: #666; }
 }
 
 /* 기준일 바 */
