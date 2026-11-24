@@ -1114,13 +1114,24 @@
   (function () {
     var c = $('#optChild'), m = $('#optMil');
     c.checked = !!OPT.child; m.checked = !!OPT.mil;
+    function target(r) {
+      if (r.memo === '군 경력') return c2(m.checked);
+      if (isChildLeaveMemo(r.memo) && /육아/.test(r.memo)) return c2(c.checked);
+      return null;
+    }
+    function c2(on) { return on ? 0 : 1; }
     function apply() {
+      /* 기존 입력(수동 체크 포함)이 바뀌는 줄 수를 세어 확인 */
+      var n = 0, who = {};
+      store.people.forEach(function (p) {
+        (p.rows || []).forEach(function (r) { var t = target(r); if (t !== null && (r.off ? 1 : 0) !== t) { n++; who[p.id] = 1; } });
+      });
+      if (n > 0 && !window.confirm('저장된 ' + Object.keys(who).length + '명의 ' + n + '개 줄(육아휴직·군 경력)의 포함 체크가 바뀝니다.\n직접 바꾼 체크도 덮어써집니다. 계속할까요?')) {
+        c.checked = !!OPT.child; m.checked = !!OPT.mil; return;
+      }
       OPT.child = c.checked ? 1 : 0; OPT.mil = m.checked ? 1 : 0; saveOpt();
       store.people.forEach(function (p) {
-        (p.rows || []).forEach(function (r) {
-          if (r.memo === '군 경력') r.off = OPT.mil ? 0 : 1;
-          else if (isChildLeaveMemo(r.memo) && /육아/.test(r.memo)) r.off = OPT.child ? 0 : 1;
-        });
+        (p.rows || []).forEach(function (r) { var t = target(r); if (t !== null) r.off = t; });
       });
       renderRows(); updateResults(); scheduleSave();
     }

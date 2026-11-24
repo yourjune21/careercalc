@@ -664,7 +664,8 @@ h2 .badge { font-size: 12px; margin-left: 6px; }
   .rows .c-memo input { width: 100%; }
   .rows .c-date { width: 172px; min-width: 172px; }
   .rows .c-n { width: 40px; }
-  .rows .c-st { width: 90px; }
+  .rows .c-st { width: 132px; }
+  .rows .c-st, .rows .c-st * { white-space: nowrap; }
 }
 
 .badge { max-width: 100%; }
