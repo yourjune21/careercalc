@@ -118,7 +118,7 @@
   var AWARD_KEY = 'careerCalc.award';
   var AW_N = 3, AW_NAME_MAX = 30, AW_SHORT = 10;
   /** 표창 기간과 겹치면 불가로 볼 경력 (정직·직위해제는 항상 제외라 체크박스 없음) */
-  var AW_EX = [['child', '육아휴직'], ['leave', '그 외 휴직(질병·기타)'], ['disp', '파견']];
+  var AW_EX = [['child', '육아휴직'], ['leave', '그 외 휴직'], ['disp', '파견']];
   function newSlot() { return { name: '', base: '', from: '', to: '', ex: { child: 1, leave: 1, disp: 1 } }; }
   var award = { slots: [] };
   for (var _i = 0; _i < AW_N; _i++) award.slots.push(newSlot());
@@ -273,12 +273,12 @@
     var box = $('#awardSlots');
     award.slots.forEach(function (sl, i) {
       var n = i + 1;
-      var nm = h('input', { id: 'awardName' + n, type: 'text', class: 'f-award', maxlength: AW_NAME_MAX, autocomplete: 'off', placeholder: '예: 교육활동 유공 표창 (선택)', 'aria-label': '표창 이름(선택)' });
+      var nm = h('input', { id: 'awardName' + n, type: 'text', class: 'f-award', maxlength: AW_NAME_MAX, autocomplete: 'off', placeholder: '예: 교육활동 유공 표창', 'aria-label': '표창 이름(선택)' });
       nm.value = sl.name || '';
       nm.addEventListener('input', function () { sl.name = nm.value.slice(0, AW_NAME_MAX); saveAward(); awardRefresh(); });
-      var base = h('input', { id: 'awardBase' + n, type: 'text', class: 'f-award', inputmode: 'numeric', autocomplete: 'off', placeholder: '예: 2026-8-31' });
+      var base = h('input', { id: 'awardBase' + n, type: 'text', class: 'f-award', inputmode: 'numeric', autocomplete: 'off', placeholder: '2026-8-31' });
       var from = h('input', { id: 'awardFrom' + n, type: 'text', class: 'f-award', inputmode: 'numeric', autocomplete: 'off', placeholder: '시작일', 'aria-label': '표창검정' + n + ' 유공기간 시작일' });
-      var to = h('input', { id: 'awardTo' + n, type: 'text', class: 'f-award', inputmode: 'numeric', autocomplete: 'off', placeholder: '종료일 (비우면 기준일)', 'aria-label': '표창검정' + n + ' 유공기간 종료일' });
+      var to = h('input', { id: 'awardTo' + n, type: 'text', class: 'f-award', inputmode: 'numeric', autocomplete: 'off', placeholder: '종료일', 'aria-label': '표창검정' + n + ' 유공기간 종료일' });
       var checks = AW_EX.map(function (x) {
         var cb = h('input', { type: 'checkbox', id: 'awardEx' + n + x[0], 'data-s': i, 'data-k': x[0] });
         cb.checked = !!sl.ex[x[0]];
@@ -287,13 +287,13 @@
       var hold = h('input', { type: 'checkbox', checked: true, disabled: true });
       var fs = h('fieldset', { class: 'aw-slot', id: 'awardSlot' + n },
         h('legend', { text: '표창검정' + n }),
-        h('div', { class: 'award-grid' },
-          h('div', { class: 'af af-name' }, h('label', { for: 'awardName' + n, text: '표창 이름 (선택)' }), nm),
-          h('div', { class: 'af' }, h('label', { for: 'awardBase' + n, text: '표창 기준일' }), base),
-          h('div', { class: 'af' }, h('label', { for: 'awardFrom' + n }, '유공기간 ', h('span', { class: 'muted small', text: '(시작일 ~ 종료일)' })), h('div', { class: 'range' }, from, h('span', { 'aria-hidden': 'true', text: '~' }), to)),
-          h('button', { type: 'button', class: 'btn ghost', id: 'awardClear' + n, text: i > 0 ? '삭제' : '지우기' })),
-        h('div', { class: 'aw-ex' }, h('span', { class: 'muted small', text: '겹치면 불가로 볼 경력:' }), checks,
-          h('label', { class: 'aw-ck fixed', title: '정직·직위해제는 항상 불가입니다' }, hold, ' 정직·직위해제(항상 제외)')));
+        h('div', { class: 'aw-line' },
+          h('div', { class: 'af af-name' }, h('label', { for: 'awardName' + n, text: '표창 이름(선택)' }), nm),
+          h('div', { class: 'af af-base' }, h('label', { for: 'awardBase' + n, text: '표창 기준일' }), base),
+          h('div', { class: 'af af-range' }, h('label', { for: 'awardFrom' + n }, '유공기간 ', h('span', { class: 'muted', text: '(종료일 비우면 기준일)' })), h('div', { class: 'range' }, from, h('span', { 'aria-hidden': 'true', text: '~' }), to)),
+          h('div', { class: 'aw-ex' }, h('span', { class: 'muted', text: '겹치면 불가:' }), checks,
+            h('label', { class: 'aw-ck fixed', title: '정직·직위해제는 항상 불가입니다' }, hold, ' 정직·직위해제')),
+          h('button', { type: 'button', class: 'btn ghost', id: 'awardClear' + n, text: i > 0 ? '삭제' : '지우기' })));
       fs.hidden = i > 0 && !(sl.base || sl.from || sl.to || sl.name);        // 검정2·3은 필요할 때 추가
       box.appendChild(fs);
       [[base, 'base'], [from, 'from'], [to, 'to']].forEach(function (d) {

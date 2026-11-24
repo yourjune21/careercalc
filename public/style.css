@@ -202,7 +202,7 @@ table.rows { width: 100%; border-collapse: collapse; min-width: 800px; }
 
 /* 반응형 */
 @media (max-width: 860px) {
-  .layout { grid-template-columns: 1fr; }
+  .layout { grid-template-columns: minmax(0, 1fr); }
   .people { position: static; }
   .people-list { max-height: 200px; }
   .foot-inner { grid-template-columns: 1fr; }
@@ -666,7 +666,69 @@ h2 .badge { font-size: 12px; margin-left: 6px; }
   .rows .c-n { width: 40px; }
   .rows .c-st { width: 90px; }
 }
-.af-name input { min-width: 14em; }
+
 .badge { max-width: 100%; }
 @media print { .ps-aw td.n { max-width: 36mm; overflow: hidden; text-overflow: ellipsis; } }
 .award-grid .af-name { grid-column: 1 / -1; }
+
+/* 표창검정 한 줄 배치 (v1.42) */
+.aw-slot { padding: 6px 12px 10px; }
+.aw-slot .aw-line { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: flex-end; }
+.aw-line .af { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.aw-line .af label { font-size: 12px; font-weight: 700; color: #4a5a5a; white-space: nowrap; }
+.aw-line .af label .muted { font-weight: 400; font-size: 11px; }
+.aw-line .af input { height: 36px; padding: 4px 10px; font-size: 14px; }
+.aw-line .af-name input { width: 180px; min-width: 0; }
+.aw-line .af-base input { width: 124px; }
+.aw-line .range { display: flex; align-items: center; gap: 4px; }
+.aw-line .range input { width: 124px; }
+.aw-line .aw-ex { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; margin: 0; padding-bottom: 6px; font-size: 13px; }
+.aw-line .aw-ex .muted { font-size: 12px; }
+.aw-line .aw-ck { font-size: 13px; }
+.aw-line > .btn { height: 36px; padding: 0 12px; margin-left: auto; }
+@media (max-width: 700px) { .aw-line .af-name { flex: 1 1 100%; } .aw-line .af-name input { width: 100%; } }
+.aw-line .af-name input { width: 164px; } .aw-line .af-base input, .aw-line .range input { width: 114px; }
+.aw-line .aw-ex { gap: 2px 8px; } .aw-line > .btn { padding: 0 8px; }
+
+/* 모바일 입력 카드 정리 (v1.43) */
+@media (max-width: 700px) {
+  .rows tr { grid-template-columns: repeat(6, 1fr); gap: 6px 8px; padding: 8px 10px 10px; margin-bottom: 6px; }
+  .rows .c-no { order: -2; grid-column: span 2; width: auto; white-space: nowrap; align-self: center; font-size: 14px; }
+  .rows .c-no::before { content: '경력'; margin-right: 4px; }
+  .rows .c-use { order: -1; grid-column: span 3; width: auto; align-self: center; }
+  .rows .c-use input { width: 20px; height: 20px; }
+  .rows .c-del { top: 4px; right: 6px; }
+  .rows .c-memo { grid-column: 1 / -1; }
+  .rows .c-memo input, .rows .c-date input { height: 40px; font-size: 15px; padding-top: 4px; padding-bottom: 4px; }
+  .rows .c-memo .dept { margin: 1px 2px 0; }
+  .rows .c-date { grid-column: span 3; }
+  .rows .c-n:empty, .rows .c-st:empty { display: none; }
+  .rows .c-n { font-size: 13px; }
+  .rows .c-st { font-size: 12px; }
+  .rows tr.row-off td:not(.c-use):not(.c-del):not(.c-no) { opacity: .5; }
+}
+.layout > * { min-width: 0; }
+@media (max-width: 700px) { .cat-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; white-space: normal; } .cat-legend .muted { flex: 1 1 100%; } }
+
+/* 모바일 요약 카드·표창검정 압축 (v1.43) */
+@media (max-width: 760px) {
+  .sum-table, .sum-table tbody { display: block; width: 100%; }
+  .sum-table tr.sum-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; align-items: center; padding: 8px 12px; margin-bottom: 6px; }
+  .sum-table tr.sum-card td { padding: 0; width: auto; display: block; border: 0; }
+  .sum-table td.sum-name { grid-column: 1; grid-row: 1; }
+  .sum-table td.sum-rcell { grid-column: 2; grid-row: 1; text-align: right; }
+  .sum-table td.sum-vcell { grid-column: 1 / -1; grid-row: 2; }
+  .sum-table td.sum-note { grid-column: 1 / -1; grid-row: 3; font-size: 12px; }
+  .sum-table .sum-value { font-size: 19px; }
+  .sum-table .sum-rec b { font-size: 14px; }
+  .sum-table .sum-note > div:first-child { display: inline; }
+  .sum-table .sum-note > details.sum-seg, .sum-table .sum-note > div.sum-seg { display: inline-block; margin: 0 0 0 8px; }
+  .sum-table .sum-note > details.sum-seg[open] { display: block; margin: 2px 0 0; }
+}
+@media (max-width: 700px) {
+  .aw-line .af-base, .aw-line .af-range { flex: 1 1 100%; }
+  .aw-line .af-base input { width: 100%; }
+  .aw-line .range input { flex: 1; width: auto; min-width: 0; }
+  .aw-line .aw-ex { flex: 1 1 100%; padding-bottom: 0; }
+  .aw-line > .btn { margin-left: auto; }
+}
