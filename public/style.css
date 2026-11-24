@@ -656,3 +656,17 @@ h2 .badge { font-size: 12px; margin-left: 6px; }
 .opt-row{display:flex;align-items:center;gap:8px;padding:6px 2px;font-weight:600;cursor:pointer}
 @media print{.opt-row{display:none}}
 .ver-tag{font-size:12px;font-weight:600;color:#6b7f7d;margin-left:6px;vertical-align:middle;letter-spacing:0}
+
+/* 입력창 크기 조정 (v1.41) */
+@media (min-width: 701px) {
+  table.rows { min-width: 760px; }
+  .rows .c-memo { width: 30%; min-width: 170px; }
+  .rows .c-memo input { width: 100%; }
+  .rows .c-date { width: 172px; min-width: 172px; }
+  .rows .c-n { width: 40px; }
+  .rows .c-st { width: 90px; }
+}
+.af-name input { min-width: 14em; }
+.badge { max-width: 100%; }
+@media print { .ps-aw td.n { max-width: 36mm; overflow: hidden; text-overflow: ellipsis; } }
+.award-grid .af-name { grid-column: 1 / -1; }

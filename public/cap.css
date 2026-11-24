@@ -127,3 +127,5 @@
 .cap .tiny .ps-foot { margin-top: 4px; }
 .cap .tiny .ps-stats { gap: 6px; }
 .cap .tiny .ps-sec { margin: 6px 0 3px; }
+.cap .opt-row { display:none }
+.cap .ps-aw td.n { max-width: 36mm; overflow: hidden; text-overflow: ellipsis; }

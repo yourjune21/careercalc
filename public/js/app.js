@@ -116,10 +116,10 @@
   /* ---------- 사람 목록 ---------- */
   /* ---------- 표창 검정 (최대 3개) ---------- */
   var AWARD_KEY = 'careerCalc.award';
-  var AW_N = 3;
+  var AW_N = 3, AW_NAME_MAX = 30, AW_SHORT = 10;
   /** 표창 기간과 겹치면 불가로 볼 경력 (정직·직위해제는 항상 제외라 체크박스 없음) */
   var AW_EX = [['child', '육아휴직'], ['leave', '그 외 휴직(질병·기타)'], ['disp', '파견']];
-  function newSlot() { return { base: '', from: '', to: '', ex: { child: 1, leave: 1, disp: 1 } }; }
+  function newSlot() { return { name: '', base: '', from: '', to: '', ex: { child: 1, leave: 1, disp: 1 } }; }
   var award = { slots: [] };
   for (var _i = 0; _i < AW_N; _i++) award.slots.push(newSlot());
   try {
@@ -128,10 +128,15 @@
     _src.slice(0, AW_N).forEach(function (o, i) {
       if (!o) return;
       if (o.merit && !o.from) o.from = o.merit;
+      if (typeof o.name === 'string') award.slots[i].name = o.name.slice(0, AW_NAME_MAX);
       ['base', 'from', 'to'].forEach(function (k) { if (CC.isoToSer(o[k]) != null) award.slots[i][k] = o[k]; });
       if (o.ex && typeof o.ex === 'object') AW_EX.forEach(function (x) { if (x[0] in o.ex) award.slots[i].ex[x[0]] = o.ex[x[0]] ? 1 : 0; });
     });
   } catch (e) { /* noop */ }
+  /** 표창 이름(선택): 없으면 '표창검정N' */
+  function awardName(i) { return (award.slots[i].name || '').trim() || '표창검정' + (i + 1); }
+  function awardShort(i) { var n = awardName(i); return n.length > AW_SHORT ? n.slice(0, AW_SHORT) + '…' : n; }
+  function awardNamed(i) { return !!(award.slots[i].name || '').trim(); }
   function saveAward() { try { window.localStorage.setItem(AWARD_KEY, JSON.stringify(award)); } catch (e) { /* noop */ } }
 
   /** 검정 조건이 갖춰졌는지: 표창 기준일 + 유공기간 시작일 필요(종료일은 비우면 기준일) */
@@ -206,10 +211,11 @@
   function awardBadge(p, small) {
     var list = awardResults(p).filter(function (x) { return x.res.status !== 'bad'; });
     if (!list.length) return null;
-    var map = { ok: ['✓ 표창가능', 'ok'], no: ['✕ 표창불가', 'no'], unknown: ['? 확인불가', 'unk'] };
+    var map = { ok: ['✓ 표창가능', 'ok', '가능'], no: ['✕ 표창불가', 'no', '불가'], unknown: ['? 확인불가', 'unk', '확인불가'] };
     return h('span', { class: 'award-badges' }, list.map(function (x) {
-      var m = map[x.res.status];
-      return h('span', { class: 'badge ' + m[1], text: (list.length > 1 || x.i > 0 ? '검정' + (x.i + 1) + ' ' : '') + m[0], title: awardTitleOf(x.res) });
+      var m = map[x.res.status], named = awardNamed(x.i);
+      var txt = named ? m[0].charAt(0) + ' ' + awardShort(x.i) + ' ' + m[2] : (list.length > 1 || x.i > 0 ? '검정' + (x.i + 1) + ' ' : '') + m[0];
+      return h('span', { class: 'badge ' + m[1], text: txt, title: (named ? awardName(x.i) + ' · ' : '') + awardTitleOf(x.res) });
     }));
   }
   function setTitleBadge(p) {
@@ -220,7 +226,7 @@
     var lines = awardResults(p).filter(function (x) { return x.res.status === 'no'; });
     why.hidden = !lines.length;
     lines.forEach(function (x) {
-      why.appendChild(h('div', { class: 'why-line' }, h('b', { text: '표창검정' + (x.i + 1) + ' 불가: ' }), x.res.reasons.map(function (g) { return g.why; }).join(' · ')));
+      why.appendChild(h('div', { class: 'why-line' }, h('b', { text: awardName(x.i) + ' 불가: ' }), x.res.reasons.map(function (g) { return g.why; }).join(' · ')));
     });
   }
   function renderAward() {
@@ -231,7 +237,7 @@
     award.slots.forEach(function (sl, i) {
       var ap = awardPeriod(sl);
       if (!ap) return;
-      if (ap.bad) { sum.appendChild(h('div', { class: 'bad small', text: '표창검정' + (i + 1) + ': 유공기간 종료일이 시작일보다 빠릅니다. 날짜를 확인하세요.' })); return; }
+      if (ap.bad) { sum.appendChild(h('div', { class: 'bad small', text: awardName(i) + ': 유공기간 종료일이 시작일보다 빠릅니다. 날짜를 확인하세요.' })); return; }
       active.push(i);
     });
     if (!active.length && !sum.children.length) { sum.className = 'award-sum muted small'; sum.textContent = '표창 기준일과 유공기간 시작일을 입력하면 판정합니다. (표창검정 3개까지)'; return; }
@@ -240,14 +246,14 @@
     active.forEach(function (i) {
       var sl = award.slots[i], ap = awardPeriod(sl), cnt = { ok: 0, no: 0, unknown: 0 };
       store.people.forEach(function (p) { cnt[awardCheck(p, sl).status]++; });
-      sum.appendChild(h('div', { class: 'sum-line', text: '표창검정' + (i + 1) + ' · 기준일 ' + CC.fmtIso(sl.base) + ' · 유공기간 ' + CC.fmtSer(ap.from) + '~' + CC.fmtSer(ap.to) + ' · 표창가능 ' + cnt.ok + '명 · 표창불가 ' + cnt.no + '명 · 확인불가 ' + cnt.unknown + '명' }));
+      sum.appendChild(h('div', { class: 'sum-line', text: awardName(i) + ' · 기준일 ' + CC.fmtIso(sl.base) + ' · 유공기간 ' + CC.fmtSer(ap.from) + '~' + CC.fmtSer(ap.to) + ' · 표창가능 ' + cnt.ok + '명 · 표창불가 ' + cnt.no + '명 · 확인불가 ' + cnt.unknown + '명' }));
     });
     store.people.forEach(function (p) {
       var rs = awardResults(p).filter(function (x) { return x.res.status !== 'bad'; });
       if (!rs.length) return;
       var st = rs.some(function (x) { return x.res.status === 'no'; }) ? 'no' : rs.some(function (x) { return x.res.status === 'unknown'; }) ? 'unknown' : 'ok';
       any[st]++;
-      var why = rs.filter(function (x) { return x.res.status === 'no'; }).map(function (x) { return '검정' + (x.i + 1) + ': ' + awardText(x.res); }).join(' / ');
+      var why = rs.filter(function (x) { return x.res.status === 'no'; }).map(function (x) { return awardShort(x.i) + ': ' + awardText(x.res); }).join(' / ');
       ul.appendChild(h('li', null, h('button', { type: 'button', class: 'award-item', 'data-id': p.id },
         h('span', { class: 'p-name', text: p.name }), awardBadge(p, true),
         h('span', { class: 'muted small', text: why }))));
@@ -267,6 +273,9 @@
     var box = $('#awardSlots');
     award.slots.forEach(function (sl, i) {
       var n = i + 1;
+      var nm = h('input', { id: 'awardName' + n, type: 'text', class: 'f-award', maxlength: AW_NAME_MAX, autocomplete: 'off', placeholder: '예: 교육활동 유공 표창 (선택)', 'aria-label': '표창 이름(선택)' });
+      nm.value = sl.name || '';
+      nm.addEventListener('input', function () { sl.name = nm.value.slice(0, AW_NAME_MAX); saveAward(); awardRefresh(); });
       var base = h('input', { id: 'awardBase' + n, type: 'text', class: 'f-award', inputmode: 'numeric', autocomplete: 'off', placeholder: '예: 2026-8-31' });
       var from = h('input', { id: 'awardFrom' + n, type: 'text', class: 'f-award', inputmode: 'numeric', autocomplete: 'off', placeholder: '시작일', 'aria-label': '표창검정' + n + ' 유공기간 시작일' });
       var to = h('input', { id: 'awardTo' + n, type: 'text', class: 'f-award', inputmode: 'numeric', autocomplete: 'off', placeholder: '종료일 (비우면 기준일)', 'aria-label': '표창검정' + n + ' 유공기간 종료일' });
@@ -279,12 +288,13 @@
       var fs = h('fieldset', { class: 'aw-slot', id: 'awardSlot' + n },
         h('legend', { text: '표창검정' + n }),
         h('div', { class: 'award-grid' },
+          h('div', { class: 'af af-name' }, h('label', { for: 'awardName' + n, text: '표창 이름 (선택)' }), nm),
           h('div', { class: 'af' }, h('label', { for: 'awardBase' + n, text: '표창 기준일' }), base),
           h('div', { class: 'af' }, h('label', { for: 'awardFrom' + n }, '유공기간 ', h('span', { class: 'muted small', text: '(시작일 ~ 종료일)' })), h('div', { class: 'range' }, from, h('span', { 'aria-hidden': 'true', text: '~' }), to)),
           h('button', { type: 'button', class: 'btn ghost', id: 'awardClear' + n, text: i > 0 ? '삭제' : '지우기' })),
         h('div', { class: 'aw-ex' }, h('span', { class: 'muted small', text: '겹치면 불가로 볼 경력:' }), checks,
           h('label', { class: 'aw-ck fixed', title: '정직·직위해제는 항상 불가입니다' }, hold, ' 정직·직위해제(항상 제외)')));
-      fs.hidden = i > 0 && !(sl.base || sl.from || sl.to);        // 검정2·3은 필요할 때 추가
+      fs.hidden = i > 0 && !(sl.base || sl.from || sl.to || sl.name);        // 검정2·3은 필요할 때 추가
       box.appendChild(fs);
       [[base, 'base'], [from, 'from'], [to, 'to']].forEach(function (d) {
         var el = d[0], k = d[1];
@@ -301,7 +311,7 @@
         });
       });
       $('#awardClear' + n).addEventListener('click', function () {
-        sl.base = sl.from = sl.to = ''; base.value = from.value = to.value = '';
+        sl.name = ''; nm.value = ''; sl.base = sl.from = sl.to = ''; base.value = from.value = to.value = '';
         if (i > 0) { fs.hidden = true; AW_EX.forEach(function (x) { sl.ex[x[0]] = 1; fs.querySelector('#awardEx' + n + x[0]).checked = true; }); syncAddBtn(); }
         saveAward(); awardRefresh();
       });
@@ -785,7 +795,7 @@
           var sl = award.slots[x.i], ap = awardPeriod(sl), m = stMap[x.res.status];
           var ex = AW_EX.filter(function (e) { return sl.ex[e[0]]; }).map(function (e) { return e[1].replace(/\(.*\)/, ''); }).concat(['정직·직위해제']).join('·');
           return h('tr', null,
-            h('td', { class: 'n', text: '표창검정' + (x.i + 1) }),
+            h('td', { class: 'n', text: awardShort(x.i), title: awardName(x.i) }),
             h('td', { text: CC.fmtIso(sl.base) }),
             h('td', { text: CC.fmtSer(ap.from) + ' ~ ' + CC.fmtSer(ap.to) }),
             h('td', { text: ex }),

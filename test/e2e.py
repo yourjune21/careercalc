@@ -103,7 +103,7 @@ with sync_playwright() as pw:
     check('기준일 변경 즉시 재계산', [r0.locator('.res-'+k).inner_text() for k in 'ymd']==['0','2','0'], [r0.locator('.res-'+k).inner_text() for k in 'ymd'])
     pg.wait_for_timeout(600); pg.reload()
     check('기준일 유지(쿠키)', pg.input_value('#refDate')=='2026. 4. 30.', pg.input_value('#refDate'))
-    check('버전 표시', 'v1.40.0' in pg.inner_text('#verLine'), pg.inner_text('#verLine'))
+    check('버전 표시', 'v1.41.0' in pg.inner_text('#verLine'), pg.inner_text('#verLine'))
     pg.fill('#newName',''); pg.click('#addForm button[type=submit]'); pg.wait_for_timeout(200)
     check('이름 비우고 추가 → 미지정1', pg.locator('#personTitle').inner_text()=='미지정1', pg.locator('#personTitle').inner_text())
     pg.click('#addForm button[type=submit]'); pg.wait_for_timeout(200)
