@@ -734,3 +734,24 @@ h2 .badge { font-size: 12px; margin-left: 6px; }
   .aw-line > .btn { margin-left: auto; }
 }
 
+
+/* v1.45 표창검정 모바일 */
+.aw-slot { min-width: 0; position: relative; }
+@media (max-width: 700px) {
+  .award { padding: 10px 12px; }
+  .aw-slot { padding: 4px 10px 10px; margin: 0; }
+  .aw-slot .aw-line { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px 10px; align-items: end; }
+  .aw-line .af-name, .aw-line .af-base { flex: none; }
+  .aw-line .af-name input, .aw-line .af-base input { width: 100%; }
+  .aw-line .af-range, .aw-line .aw-ex { grid-column: 1 / -1; }
+  .aw-line .af input { height: 40px; font-size: 16px; }
+  .aw-line .range { gap: 6px; }
+  .aw-line .aw-ex { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 0; }
+  .aw-line .aw-ex > .muted { grid-column: 1 / -1; font-size: 12px; }
+  .aw-line .aw-ck { display: flex; align-items: center; gap: 6px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; font-size: 14px; min-width: 0; }
+  .aw-line .aw-ck input { width: 18px; height: 18px; margin: 0; flex: none; }
+  .aw-line .aw-ck.fixed { color: #8a8a8a; background: #f4f4f1; }
+  .aw-line > .btn { position: absolute; top: -14px; right: 8px; height: 28px; padding: 0 10px; font-size: 13px; margin: 0; background: var(--card, #fff); border: 1px solid var(--line); border-radius: 999px; }
+  .award-help { font-size: 13px; overflow-wrap: anywhere; }
+  .award-title .muted { display: block; margin-top: 2px; font-weight: 500; }
+}
