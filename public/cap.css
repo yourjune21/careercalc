@@ -81,8 +81,6 @@
 .cap .ps-sum td.d { background: #fef8f0 !important; color: #8a5420; }
 .cap .ps-sum thead th.l { color: #a1473f; border-bottom-color: #a1473f; background: #faebe9 !important; }
 .cap .ps-sum td.l { background: #fdf5f4 !important; color: #7d332c; }
-.cap .ps-sum thead th.c { color: #8a6d00; border-bottom-color: #8a6d00; background: #fbf5dc !important; }
-.cap .ps-sum td.c { background: #fefbef !important; color: #6e5700; }
 .cap .ps-sum thead th.j { color: #4d7a2e; border-bottom-color: #4d7a2e; background: #eef5e6 !important; }
 .cap .ps-sum td.j { background: #f7faf3 !important; color: #3b6322; }
 .cap .ps-sum td, .cap .ps-sum th { white-space: nowrap; }

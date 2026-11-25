@@ -717,7 +717,7 @@
       lines.push('인사기록 PDF 기준 (기준일 ' + CC.fmtIso(effRef()) + ')');
       var who = [p.doc.name, p.doc.org, p.doc.pos].filter(Boolean).join(' · ');
       if (who) lines.push(who);
-      [['total', '총경력(체크한 줄 모두 포함)'], ['actual', '실재직 경력(휴직·군 경력 제외)'], ['buzang', '부장 경력'], ['homeroom', '담임 경력'], ['research', '연구학교 경력'], ['violence', '학교폭력 예방기여 경력'], ['mil', '군 경력'], ['dispatch', '파견 경력'], ['leave', '휴직 경력'], ['pro', '전문직 경력']].filter(function (d) { return (d[0] !== 'pro' || c.pro.segs.length) && (d[0] !== 'mil' || hasMil); }).sort(function (x, y) { var o = getOrder(), cl = { total: 't', actual: 'a', buzang: 'b', homeroom: 'c', research: 'r', violence: 'v', dispatch: 'd', pro: 'j', leave: 'l', mil: 'm' }; return o.indexOf(cl[x[0]]) - o.indexOf(cl[y[0]]); }).forEach(function (d) {
+      [['total', '총경력(체크한 줄 모두 포함)'], ['actual', '실재직 경력(휴직·군 경력 제외)'], ['buzang', '부장 경력'], ['research', '연구학교 경력'], ['violence', '학교폭력 예방기여 경력'], ['mil', '군 경력'], ['dispatch', '파견 경력'], ['leave', '휴직 경력'], ['pro', '전문직 경력']].filter(function (d) { return (d[0] !== 'pro' || c.pro.segs.length) && (d[0] !== 'mil' || hasMil); }).sort(function (x, y) { var o = getOrder(), cl = { total: 't', actual: 'a', buzang: 'b', research: 'r', violence: 'v', dispatch: 'd', pro: 'j', leave: 'l', mil: 'm' }; return o.indexOf(cl[x[0]]) - o.indexOf(cl[y[0]]); }).forEach(function (d) {
         lines.push(d[1] + ': ' + fmtTotal(c[d[0]].sum) + ' (인정 ' + (d[0] === 'violence' ? violenceRecog(c[d[0]].sum) : fmtRecog(c[d[0]].rec)) + ')');
       });
     }
@@ -761,7 +761,7 @@
     box.appendChild(stats);
     if (doc) {
       var c = docCompute(p, a, doc.recs);
-      var items = [['총경력', c.total, 0, 't', ''], ['실재직', c.actual, 0, 'a', ''], ['부장', c.buzang, 0, 'b', 'buzang'], ['담임', c.homeroom, 0, 'c', 'homeroom'], ['연구학교', c.research, 0, 'r', ''], ['학교폭력 예방기여', c.violence, 1, 'v', ''], ['파견', c.dispatch, 0, 'd', 'dispatch'], ['휴직', c.leave, 0, 'l', 'leave']];
+      var items = [['총경력', c.total, 0, 't', ''], ['실재직', c.actual, 0, 'a', ''], ['부장', c.buzang, 0, 'b', 'buzang'], ['연구학교', c.research, 0, 'r', ''], ['학교폭력 예방기여', c.violence, 1, 'v', ''], ['파견', c.dispatch, 0, 'd', 'dispatch'], ['휴직', c.leave, 0, 'l', 'leave']];
       if (doc.recs.some(function (r) { return r.k === 'M'; })) items.push(['군 경력', c.mil, 0, 'm', 'mil']);
       if (c.pro.segs.length) items.push(['전문직', c.pro, 0, 'j', 'pro']);
       items = sortBy(items, function (it) { return it[3]; });
@@ -1032,7 +1032,7 @@
   });
 
   /* ---------- 인사기록 PDF ---------- */
-  var KIND = { S: '재직', B: '재직·부장', D: '재직·파견', J: '재직·전문직', L: '휴직 등(차감)', V: '학교폭력', R: '연구학교', C: '담임(가산점 비고)', M: '군 복무', H: '첫 채용(중복·제외)' };
+  var KIND = { S: '재직', B: '재직·부장', D: '재직·파견', J: '재직·전문직', L: '휴직 등(차감)', V: '학교폭력', R: '연구학교', M: '군 복무', H: '첫 채용(중복·제외)' };
   var pdfMode = 'auto', pdfLib = null;
 
   function setDocMsg(t) { $('#docMsg').textContent = t || ''; }
@@ -1063,18 +1063,12 @@
   function isChildLeaveMemo(memo) { var t = String(memo || '').split('·'); return t.length > 0 && t.every(function (x) { return /육아/.test(x); }); }
 
   var SORT_KEY = 'careerCalc.order';
-  var SORT_DEF = [['t', '총경력'], ['a', '실재직 경력'], ['b', '부장 경력'], ['c', '담임 경력'], ['r', '연구학교 경력'], ['v', '학교폭력 예방기여 경력'], ['d', '파견 경력'], ['j', '전문직 경력'], ['l', '휴직 경력'], ['m', '군 경력']];
+  var SORT_DEF = [['t', '총경력'], ['a', '실재직 경력'], ['b', '부장 경력'], ['r', '연구학교 경력'], ['v', '학교폭력 예방기여 경력'], ['d', '파견 경력'], ['j', '전문직 경력'], ['l', '휴직 경력'], ['m', '군 경력']];
   function sortLabel(id) { for (var i = 0; i < SORT_DEF.length; i++) if (SORT_DEF[i][0] === id) return SORT_DEF[i][1]; return id; }
   function getOrder() {
     var ids = SORT_DEF.map(function (d) { return d[0]; }), out = [];
     try { (JSON.parse(localStorage.getItem(SORT_KEY) || '[]') || []).forEach(function (k) { if (ids.indexOf(k) >= 0 && out.indexOf(k) < 0) out.push(k); }); } catch (e) { /* noop */ }
-    ids.forEach(function (k, i) {                       // 새로 생긴 항목(예: 담임)은 기본 순서상 앞 항목 뒤에 끼워 넣음
-      if (out.indexOf(k) >= 0) return;
-      var at = out.length;
-      for (var j = i - 1; j >= 0; j--) { var q = out.indexOf(ids[j]); if (q >= 0) { at = q + 1; break; } }
-      if (i === 0) at = 0;
-      out.splice(at, 0, k);
-    });
+    ids.forEach(function (k) { if (out.indexOf(k) < 0) out.push(k); });
     return out;
   }
   function setOrder(list) { try { localStorage.setItem(SORT_KEY, JSON.stringify(list)); } catch (e) { /* noop */ } }
@@ -1084,7 +1078,7 @@
   /* 설정 창: 출력 순서(끌어서 변경) */
   (function () {
     var back = $('#setBack'), list = $('#ordList'), dragId = null;
-    var colors = { t: '#0f5c5c', a: '#2f4fb8', b: '#6a4fb0', c: '#8a6d00', r: '#c0508a', v: '#1f6fa8', d: '#c07a2a', j: '#3f7a2e', l: '#a64444', m: '#5a6b7d' };
+    var colors = { t: '#0f5c5c', a: '#2f4fb8', b: '#6a4fb0', r: '#c0508a', v: '#1f6fa8', d: '#c07a2a', j: '#3f7a2e', l: '#a64444', m: '#5a6b7d' };
     function applyOrder(o) { setOrder(o); draw(); updateResults(); var pp = $('#printSheet'); if (pp && pp.children.length) { try { buildPrintSheet(); } catch (e) { /* noop */ } } }
     function move(id, to) { var o = getOrder(), i = o.indexOf(id); if (to < 0 || to >= o.length) return; o.splice(i, 1); o.splice(to, 0, id); applyOrder(o); }
     function draw() {
@@ -1188,7 +1182,7 @@
     var base = buildRowsFromRecs(recs, groupRows);
     var rowsNow = p.rows.filter(function (r) { return r.memo || r.start || r.end; });
     if (sameRows(rowsNow, base)) return null;
-    var ref = CC.isoToSer(effRef()), cat = { b: [], c: [], d: [], j: [], l: [], m: [] }, all = [];
+    var ref = CC.isoToSer(effRef()), cat = { b: [], d: [], j: [], l: [], m: [] }, all = [];
     p.rows.forEach(function (r, i) {
       var x = a.rows[i], c = catOf(r.memo);
       if (x.kind === 'ok') { all.push({ s: x.s, e: x.e }); if (cat[c]) cat[c].push({ s: x.s, e: x.e }); }
@@ -1201,7 +1195,7 @@
       var u = CC.union(segs, touch), sum = CC.sum(u.map(function (g) { return CC.diff(g.s, g.e); }));
       return { sum: sum, rec: CC.recognize(sum) };
     }
-    return { buzang: pack(cat.b, true), homeroom: pack(cat.c, true), dispatch: pack(cat.d, true), pro: pack(cat.j, true), leave: pack(cat.l, true), mil: pack(cat.m, true) };
+    return { buzang: pack(cat.b, true), dispatch: pack(cat.d, true), pro: pack(cat.j, true), leave: pack(cat.l, true), mil: pack(cat.m, true) };
   }
   function renderDoc(p, a) {
     applyFold(p);
@@ -1228,7 +1222,6 @@
     [['total', '총계', 't', '체크한 줄 모두 (중복은 한 번)'],
      ['actual', '실재직', 'a', '총계에서 휴직·군을 뺀 실제 근무'],
      ['buzang', '부장', 'b', '부장교사·부장담임 보직 기간'],
-     ['homeroom', '담임', 'c', '12.가산점 비고에 ‘담임’이 적힌 기간 (입력창에 "담임" 줄을 넣으면 그 기준도 표시)'],
      ['research', '연구학교', 'r', '12.가산점 ‘연구·시범학교’ 기간'],
      ['violence', '학교폭력 예방기여', 'v', '학교폭력예방및기여 가산점 기간'],
      ['mil', '군', 'm', '병역사항 복무 (총계 미포함, 체크 시 반영)'],
@@ -1256,7 +1249,7 @@
       h('thead', null, h('tr', null, h('th', { text: '항목' }), h('th', { text: '경력' }), h('th', { text: '인정 경력' }), h('th', { text: '기준 · 기간' }))), tbody));
     $('#docNote').textContent = '기준일 ' + CC.fmtIso(effRef()) + '까지 계산 · 기준일을 바꾸면 자동으로 다시 계산됩니다 · 인정 경력은 15일 이상이면 1개월 올림' + (ed ? ' · 입력창을 수정해서 PDF 기록과 입력창 기준 값을 함께 표시합니다 (연구학교·학교폭력은 입력창에 없어 PDF 값만)' : '');
 
-    var order = { S: 0, H: 0, B: 0, D: 0, J: 0, M: 0, L: 1, C: 2, R: 2, V: 2 };
+    var order = { S: 0, H: 0, B: 0, D: 0, J: 0, M: 0, L: 1, R: 2, V: 2 };
     var idx = recs.map(function (r, i) { return i; }).sort(function (a, b) {
       var A = recs[a], B = recs[b];
       return order[A.k] - order[B.k] || (A.s < B.s ? 1 : A.s > B.s ? -1 : 0);
@@ -1288,7 +1281,7 @@
   var CAT_MEMO = { S: '재직', H: '재직', B: '부장', D: '파견', J: '전문직' };
   function catOf(memo) {
     var m = String(memo || '').trim();
-    return /^부장/.test(m) ? 'b' : /^담임/.test(m) ? 'c' : /^파견/.test(m) ? 'd' : /^전문직/.test(m) ? 'j' : /휴직|정직|직위해제/.test(m) ? 'l' : /^군/.test(m) ? 'm' : /^재직/.test(m) ? 's' : '';
+    return /^부장/.test(m) ? 'b' : /^파견/.test(m) ? 'd' : /^전문직/.test(m) ? 'j' : /휴직|정직|직위해제/.test(m) ? 'l' : /^군/.test(m) ? 'm' : /^재직/.test(m) ? 's' : '';
   }
   /**
    * 기록(recs) → 입력창 행.

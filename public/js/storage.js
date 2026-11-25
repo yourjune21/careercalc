@@ -45,7 +45,7 @@
   }
   // 로컬 저장소·백업용: 부서(d)는 쿠키 한도 때문에 쿠키에는 넣지 않는다
   function unpackRec(t) {
-    var m = /^([SHBDJLVRMC])(\d{8})(\d{8})(!?)$/.exec(t);
+    var m = /^([SHBDJLVRM])(\d{8})(\d{8})(!?)$/.exec(t);
     if (!m) return null;
     var s = isoFrom8(m[2]);
     var e = m[3] === '00000000' ? '' : isoFrom8(m[3]);
@@ -57,7 +57,7 @@
     if (!doc || !Array.isArray(doc.recs)) return null;
     var recs = [];
     doc.recs.slice(0, 120).forEach(function (r) {
-      if (!r || 'SHBDJLVRMC'.indexOf(r.k) < 0 || r.k.length !== 1) return;
+      if (!r || 'SHBDJLVRM'.indexOf(r.k) < 0 || r.k.length !== 1) return;
       if (CC.isoToSer(r.s) == null) return;
       var e = r.e || '';
       if (e && CC.isoToSer(e) == null) return;

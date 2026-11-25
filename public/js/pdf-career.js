@@ -7,7 +7,6 @@
  *
  * 기록(record) 형태: { k:'S'|'B'|'D'|'J'|'L'|'V'|'R'|'M'|'H', s:'YYYY-MM-DD', e:'YYYY-MM-DD'|'' , x:0|1, lab? }
  *   S 재직(일반)  B 재직 중 부장  D 재직 중 파견  J 재직 중 전문직(장학사·교육연구사 등)
- *   C 담임(가산점 비고에 '담임'이 적힌 기간 — 인사기록에 담임 경력 칸이 따로 없어 이것으로 추정)
  *   L 휴직 등(총경력에서 차감)  V 학교폭력예방및기여  R 연구·시범학교(가산점)  M 군 복무(기본은 제외 x=1, 체크하면 총경력에 합산)
  *   e가 비어 있으면 ‘현재까지(기준일까지)’, x=1 이면 계산에서 제외
  */
@@ -169,8 +168,6 @@
         .sort(function (p, q) { return q.y - p.y || p.x - q.x; })
         .map(function (i) { return i.str; }).join(' ');
       var an = norm(area);
-      var whole = norm(r.texts.map(function (i) { return i.str; }).join(''));
-      if (/담임/.test(whole)) records.push({ k: 'C', s: r.s, e: r.e, x: 0, lab: '가산점 비고 ‘담임’ · ' + area.replace(/\s+/g, ' ').trim().slice(0, 40) });
       if (/학교폭력/.test(an)) {
         records.push({ k: 'V', s: r.s, e: r.e, x: 0, lab: area.replace(/\s+/g, ' ').slice(0, 60) });
       } else if (/연구.?시범학교|연구학교/.test(an)) {
@@ -261,7 +258,6 @@
       total: pack(CC.subtract(CC.union(iv(kinds(['S', 'H', 'B', 'D', 'J'])), true), leaves)),
       mil: pack(CC.union(iv(records.filter(function (r) { return r.k === 'M'; })))),
       buzang: pack(CC.subtract(CC.union(iv(kinds(['B'])), true), leaves)),
-      homeroom: pack(CC.subtract(CC.union(iv(kinds(['C'])), true), leaves)),
       violence: pack(CC.union(iv(kinds(['V'])))),
       research: pack(CC.union(iv(kinds(['R'])))),
       dispatch: pack(CC.subtract(CC.union(iv(kinds(['D'])), true), leaves)),
